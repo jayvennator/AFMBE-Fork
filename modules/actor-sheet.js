@@ -413,6 +413,12 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             `<option value="${escape(key)}">${escape(game.i18n.localize(`AFMBE.Attributes.Primary.${key[0].toUpperCase()}${key.slice(1)}`))}</option>`
         ).join('')
         const skillOptions = skills.map(item => `<option value="${escape(item.id)}">${escape(item.name)} (${Number(item.system.level) || 0})</option>`).join('')
+        const hasMagazine = Number(weapon.system.capacity?.max) > 0
+        const firingModes = [
+            { value: 'semi', label: game.i18n.localize('AFMBE.Weapon.FiringMode.Semi') },
+            { value: 'burst', label: game.i18n.localize('AFMBE.Weapon.FiringMode.Burst') },
+            { value: 'auto', label: game.i18n.localize('AFMBE.Weapon.FiringMode.Auto') }
+        ]
         const content = `<form class="afmbe-attack-dialog">
             <div class="form-group"><label>Attribute</label><select name="attribute">${options}</select></div>
             <div class="form-group"><label>Skill</label><select name="skill"><option value="">None</option>${skillOptions}</select></div>
@@ -420,6 +426,9 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                 <option value="0">Body (0)</option><option value="-2">Arm or leg (-2)</option><option value="-4">Head (-4)</option>
             </select></div>
             <div class="form-group"><label>Other modifier</label><input type="number" name="modifier" value="0" step="1"></div>
+            ${hasMagazine ? `<div class="form-group"><label>Rounds fired</label><input type="number" name="shots" value="1" min="1" step="1"></div>
+            <div class="form-group"><label>Firing mode</label><select name="firingMode">${firingModes.map(mode => `<option value="${mode.value}">${escape(mode.label)}</option>`).join('')}</select></div>
+            <p>Magazine: ${Number(weapon.system.capacity.value) || 0} / ${Number(weapon.system.capacity.max)}</p>` : ''}
         </form>`
         new Dialog({
             title: `Attack: ${weapon.name}`,
@@ -434,12 +443,23 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                     const skillLevel = Number(skill?.system.level) || 0
                     const location = Number(form.elements.location.value) || 0
                     const modifier = Number(form.elements.modifier.value) || 0
+                    const shots = hasMagazine ? Number(form.elements.shots.value) : 0
+                    if (hasMagazine) {
+                        const remaining = Number(weapon.system.capacity?.value)
+                        if (!Number.isInteger(shots) || shots < 1 || !Number.isFinite(remaining) || shots > remaining) {
+                            ui.notifications.warn(`Not enough ammunition in ${weapon.name} for that attack.`)
+                            return
+                        }
+                        // Firing spends ammunition whether the attack hits or misses.
+                        await weapon.update({ 'system.capacity.value': remaining - shots })
+                    }
                     const roll = await new Roll('1d10').evaluate()
                     const total = roll.total + attribute + skillLevel + location + modifier
                     const success = total >= 9
                     const degrees = success ? Math.floor((total - 9) / 2) + 1 : 0
                     const locationName = form.elements.location.selectedOptions[0].textContent
-                    const content = `<h2>${escape(weapon.name)}: Attack</h2><p>${escape(attributeKey)} ${attribute}, ${escape(skill?.name ?? 'No skill')} ${skillLevel}, ${escape(locationName)}, modifier ${modifier}</p><p>Roll ${roll.total} + modifiers = <strong>${total}</strong> vs 9: <strong>${success ? `Hit (${degrees} degree${degrees === 1 ? '' : 's'})` : 'Miss'}</strong></p>`
+                    const ammoNote = hasMagazine ? `<p>${shots} round${shots === 1 ? '' : 's'} fired (${escape(firingModes.find(mode => mode.value === form.elements.firingMode.value)?.label ?? '')}); ${weapon.system.capacity.value}/${weapon.system.capacity.max} remaining.</p>` : ''
+                    const content = `<h2>${escape(weapon.name)}: Attack</h2><p>${escape(attributeKey)} ${attribute}, ${escape(skill?.name ?? 'No skill')} ${skillLevel}, ${escape(locationName)}, modifier ${modifier}</p><p>Roll ${roll.total} + modifiers = <strong>${total}</strong> vs 9: <strong>${success ? `Hit (${degrees} degree${degrees === 1 ? '' : 's'})` : 'Miss'}</strong></p>${ammoNote}`
                     await ChatMessage.create({ user: game.user.id, speaker: ChatMessage.getSpeaker({ actor: this.actor }), content, rolls: [roll] })
                 } }
             },
@@ -455,50 +475,19 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         const target = targetedTokens.length === 1 ? targetedTokens[0].actor : null
 
         const dialogTitle = game.i18n.localize("AFMBE.Dialog.WeaponRoll.Title")
-        const rangedInfo = game.i18n.localize("AFMBE.Dialog.WeaponRoll.RangedInfo")
-        const meleeInfo = game.i18n.localize("AFMBE.Dialog.WeaponRoll.MeleeInfo")
         const optionsLabel = game.i18n.localize("AFMBE.Dialog.WeaponRoll.Options")
-        const shotsLabel = game.i18n.localize("AFMBE.Dialog.WeaponRoll.Shots")
-        const firingModeLabel = game.i18n.localize("AFMBE.Dialog.WeaponRoll.FiringMode")
         const cancelLabel = game.i18n.localize("AFMBE.Dialog.Button.Cancel")
         const rollLabel = game.i18n.localize("AFMBE.Dialog.Button.Roll")
-        const firingModes = [
-            { value: "none", label: game.i18n.localize("AFMBE.Weapon.FiringMode.None") },
-            { value: "semi", label: game.i18n.localize("AFMBE.Weapon.FiringMode.Semi") },
-            { value: "burst", label: game.i18n.localize("AFMBE.Weapon.FiringMode.Burst") },
-            { value: "auto", label: game.i18n.localize("AFMBE.Weapon.FiringMode.Auto") }
-        ]
-        const firingModeLabels = Object.fromEntries(firingModes.map(mode => [mode.value, mode.label]))
-        const shotLabel = (count) => count === 1 ? game.i18n.format("AFMBE.Weapon.Shot.Single", { count }) : game.i18n.format("AFMBE.Weapon.Shot.Multiple", { count })
 
         let mode = game.settings.get("afmbe-jesuisfrog", "dark-mode") ? "dark-mode" : ""
         let dialogOptions = { classes: ["dialog", "afmbe-jesuisfrog", mode] }
 
         const content = `<div class="afmbe-dialog-menu">
 
-                            <div class="afmbe-dialog-menu-text-box">
-                                <p>${rangedInfo}</p>
-                                <p>${meleeInfo}</p>
-                            </div>
-
                             <div>
                                 <h2>${optionsLabel}</h2>
                                 <table>
                                     <tbody>
-                                        <tr>
-                                            <th>${shotsLabel}</th>
-                                            <td>
-                                                <input type="number" id="shotNumber" name="shotNumber" value="0">
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <th>${firingModeLabel}</th>
-                                            <td>
-                                                <select id="firingMode" name="firingMode">
-                                                    ${firingModes.map(option => `<option value="${option.value}">${option.label}</option>`).join("")}
-                                                </select>
-                                            </td>
-                                        </tr>
                                         <tr>
                                             <th>Target</th>
                                             <td>${target ? foundry.utils.escapeHTML(target.name) : 'None selected (damage roll only)'}</td>
@@ -528,27 +517,9 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                 two: {
                     label: rollLabel,
                     callback: async html => {
-                        const shotNumber = Number(html[0].querySelector('#shotNumber').value) || 0
-                        const firingMode = html[0].querySelector('#firingMode').value
                         const hitLocation = html[0].querySelector('#hitLocation').value
 
                         const roll = await new Roll(weapon.system.damage_string).evaluate()
-
-                        let tags = []
-                        if (firingMode !== 'none' && shotNumber > 0) {
-                            tags.push(`<div><b>${firingModeLabels[firingMode]}</b>: ${shotLabel(shotNumber)}</div>`)
-                        }
-
-                        if (shotNumber > 0) {
-                            switch (weapon.system.capacity.value - shotNumber >= 0) {
-                                case true:
-                                    weapon.update({ 'system.capacity.value': weapon.system.capacity.value - shotNumber })
-                                    break
-
-                                case false:
-                                    return ui.notifications.info(game.i18n.format("AFMBE.Notifications.NotEnoughAmmo", { shots: shotNumber }))
-                            }
-                        }
 
                         const damageRollHeader = game.i18n.format("AFMBE.Chat.DamageRollFor", { weapon: weapon.name })
                         const damageLabel = game.i18n.localize("AFMBE.Chat.Damage")
@@ -579,7 +550,6 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                         const damageMessage = await ChatMessage.create({
                             user: game.user.id,
                             speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-                            flavor: `<div class="afmbe-tags-flex-container-item">${tags.join('')}</div>`,
                             content: chatContent,
                             rolls: [roll],
                             ...(target ? { flags: { 'afmbe-jesuisfrog': { armorDamage: {

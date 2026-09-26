@@ -2,7 +2,7 @@
   "id": "afmbe-jesuisfrog",
   "title": "All Flesh Must Be Eaten by Jesuisfrog",
   "description": "A digital system for playing AFMBE (All Flesh Must Be Eaten) by Eden Studios",
-  "version": "1.2.1-test.2",
+  "version": "1.2.1-test.3",
   "esmodules": [
     "modules/main.js"
   ],
@@ -36,6 +36,6 @@
     "minimum": "13",
     "maximum": "13"
   },
-  "manifest": "https://github.com/jayvennator/AFMBE-Fork/releases/download/v1.2.1-test.2/system.json",
-  "download": "https://github.com/jayvennator/AFMBE-Fork/releases/download/v1.2.1-test.2/afmbe-jesuisfrog-v1.2.1-test.2.zip"
+  "manifest": "https://github.com/jayvennator/AFMBE-Fork/releases/download/v1.2.1-test.3/system.json",
+  "download": "https://github.com/jayvennator/AFMBE-Fork/releases/download/v1.2.1-test.3/afmbe-jesuisfrog-v1.2.1-test.3.zip"
 }
