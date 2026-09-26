@@ -3,8 +3,8 @@ export class afmbevehicleSheet extends foundry.appv1.sheets.ActorSheet {
     /** @override */
     static get defaultOptions() {
         return foundry.utils.mergeObject(super.defaultOptions, {
-            classes: ["afmbe-jesuisfrog", "sheet", "actor", `${game.settings.get("afmbe-jesuisfrog", "dark-mode") ? "dark-mode" : ""}`],
-            // template: "systems/afmbe-jesuisfrog/templates/vehicle-sheet.hbs",
+            classes: ["afmbe-left-behind", "sheet", "actor", `${game.settings.get("afmbe-left-behind", "dark-mode") ? "dark-mode" : ""}`],
+            // template: "systems/afmbe-left-behind/templates/vehicle-sheet.hbs",
             width: 700,
             height: 780,
             tabs: [{ navSelector: ".sheet-tabs", contentSelector: ".sheet-body", initial: "core" }],
@@ -81,8 +81,8 @@ export class afmbevehicleSheet extends foundry.appv1.sheets.ActorSheet {
     }
 
     get template() {
-        const path = "systems/afmbe-jesuisfrog/templates";
-        if (!game.user.isGM && this.actor.limited) return "systems/afmbe-jesuisfrog/templates/limited-vehicle-sheet.hbs";
+        const path = "systems/afmbe-left-behind/templates";
+        if (!game.user.isGM && this.actor.limited) return "systems/afmbe-left-behind/templates/limited-vehicle-sheet.hbs";
         return `${path}/${this.actor.type}-sheet.hbs`;
     }
 

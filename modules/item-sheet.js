@@ -3,7 +3,7 @@ export class afmbeItemSheet extends foundry.appv1.sheets.ItemSheet {
     /** @override */
     static get defaultOptions() {
         return foundry.utils.mergeObject(super.defaultOptions, {
-            classes: ["afmbe-jesuisfrog", "sheet", "item", `${game.settings.get("afmbe-jesuisfrog", "dark-mode") ? "dark-mode" : ""}`],
+            classes: ["afmbe-left-behind", "sheet", "item", `${game.settings.get("afmbe-left-behind", "dark-mode") ? "dark-mode" : ""}`],
             width: 600,
             height: 450,
             tabs: [{ navSelector: ".sheet-tabs", contentSelector: ".sheet-body-items", initial: "description" }]
@@ -15,7 +15,7 @@ export class afmbeItemSheet extends foundry.appv1.sheets.ItemSheet {
 
     /** @override */
     get template() {
-        const path = "systems/afmbe-jesuisfrog/templates";
+        const path = "systems/afmbe-left-behind/templates";
         return `${path}/${this.item.type}-sheet.hbs`;
     }
 

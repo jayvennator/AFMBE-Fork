@@ -35,28 +35,28 @@ Hooks.once("init", async function () {
     // Register sheet application classes
     foundry.documents.collections.Actors.unregisterSheet("core", foundry.appv1.sheets.ActorSheet)
 
-    foundry.documents.collections.Actors.registerSheet("afmbe-jesuisfrog", afmbeActorSheet,
+    foundry.documents.collections.Actors.registerSheet("afmbe-left-behind", afmbeActorSheet,
         {
             types: ["character"],
             makeDefault: true,
             label: game.i18n.localize("AFMBE.Sheets.Character")
         })
 
-    foundry.documents.collections.Actors.registerSheet("afmbe-jesuisfrog", afmbeCreatureSheet,
+    foundry.documents.collections.Actors.registerSheet("afmbe-left-behind", afmbeCreatureSheet,
         {
             types: ["creature"],
             makeDefault: true,
             label: game.i18n.localize("AFMBE.Sheets.Creature")
         })
 
-    foundry.documents.collections.Actors.registerSheet("afmbe-jesuisfrog", afmbevehicleSheet,
+    foundry.documents.collections.Actors.registerSheet("afmbe-left-behind", afmbevehicleSheet,
         {
             types: ["vehicle"],
             makeDefault: true,
             label: game.i18n.localize("AFMBE.Sheets.Vehicle")
         })
 
-    foundry.documents.collections.Items.registerSheet("afmbe-jesuisfrog", afmbeItemSheet,
+    foundry.documents.collections.Items.registerSheet("afmbe-left-behind", afmbeItemSheet,
         {
             makeDefault: true,
             label: game.i18n.localize("AFMBE.Sheets.Item")
@@ -66,7 +66,7 @@ Hooks.once("init", async function () {
     // Game Settings
     function delayedReload() { window.setTimeout(() => location.reload(), 500) }
 
-    game.settings.register("afmbe-jesuisfrog", "dark-mode", {
+    game.settings.register("afmbe-left-behind", "dark-mode", {
         name: game.i18n.localize("AFMBE.Settings.DarkMode.Name"),
         hint: game.i18n.localize("AFMBE.Settings.DarkMode.Hint"),
         scope: "world",
@@ -83,7 +83,7 @@ Hooks.once("init", async function () {
 
 // Hook for Re-Rolls on Lucky/Unlucky Rolls
 Hooks.on("renderChatMessage", (app, html, data) => {
-    const armorDamage = app.getFlag('afmbe-jesuisfrog', 'armorDamage');
+    const armorDamage = app.getFlag('afmbe-left-behind', 'armorDamage');
     if (armorDamage && game.user.isGM && !armorDamage.applied) {
         const button = document.createElement('button');
         button.type = 'button';
@@ -91,7 +91,7 @@ Hooks.on("renderChatMessage", (app, html, data) => {
         button.addEventListener('click', async () => {
             button.disabled = true;
             await applyArmorDamage(app);
-            if (!app.getFlag('afmbe-jesuisfrog', 'armorDamage')?.applied) button.disabled = false;
+            if (!app.getFlag('afmbe-left-behind', 'armorDamage')?.applied) button.disabled = false;
         });
         html[0].querySelector('.message-content')?.append(button);
     }

@@ -17,18 +17,18 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Foundry package
         run: |
-          zip -q -r "$RUNNER_TEMP/afmbe-jesuisfrog-v1.2.1-test.5.zip" . -x '.git/*' '.github/*'
+          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.6.zip" . -x '.git/*' '.github/*'
           cp system.json "$RUNNER_TEMP/system.json"
-          unzip -p "$RUNNER_TEMP/afmbe-jesuisfrog-v1.2.1-test.5.zip" system.json | python3 -m json.tool >/dev/null
-          unzip -tq "$RUNNER_TEMP/afmbe-jesuisfrog-v1.2.1-test.5.zip"
+          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.6.zip" system.json | python3 -m json.tool >/dev/null
+          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.6.zip"
       - name: Publish prerelease
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.2.1-test.5 \
-            "$RUNNER_TEMP/afmbe-jesuisfrog-v1.2.1-test.5.zip" \
+          gh release create v1.2.1-test.6 \
+            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.6.zip" \
             "$RUNNER_TEMP/system.json" \
             --target "$GITHUB_SHA" \
-            --title "AFMBE V13 armor item type test 5" \
-            --notes "Foundry V13 build 351 test. Adds a dedicated Armor item type and an optional conversion action for legacy generic armor items. Existing armor protection remains active. In-game testing pending." \
+            --title "AFMBE: Left Behind V13 test 6" \
+            --notes "Foundry V13 build 351 test. Assigns this fork the unique afmbe-left-behind system ID so future updates use its own manifest. Install as a new system; existing worlds remain assigned to their previous system ID." \
             --prerelease

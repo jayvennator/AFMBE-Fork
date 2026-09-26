@@ -1,8 +1,8 @@
 {
-  "id": "afmbe-jesuisfrog",
-  "title": "All Flesh Must Be Eaten by Jesuisfrog",
+  "id": "afmbe-left-behind",
+  "title": "AFMBE: Left Behind",
   "description": "A digital system for playing AFMBE (All Flesh Must Be Eaten) by Eden Studios",
-  "version": "1.2.1-test.5",
+  "version": "1.2.1-test.6",
   "esmodules": [
     "modules/main.js"
   ],
@@ -37,5 +37,5 @@
     "maximum": "13"
   },
   "manifest": "https://raw.githubusercontent.com/jayvennator/AFMBE-Fork/codex/v13-attack-dialog-test/system.json",
-  "download": "https://github.com/jayvennator/AFMBE-Fork/releases/download/v1.2.1-test.5/afmbe-jesuisfrog-v1.2.1-test.5.zip"
+  "download": "https://github.com/jayvennator/AFMBE-Fork/releases/download/v1.2.1-test.6/afmbe-left-behind-v1.2.1-test.6.zip"
 }

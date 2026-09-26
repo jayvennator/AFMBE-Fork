@@ -5,7 +5,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
     /** @override */
     static get defaultOptions() {
         return foundry.utils.mergeObject(super.defaultOptions, {
-            classes: ["afmbe-jesuisfrog", "sheet", "actor", `${game.settings.get("afmbe-jesuisfrog", "dark-mode") ? "dark-mode" : ""}`],
+            classes: ["afmbe-left-behind", "sheet", "actor", `${game.settings.get("afmbe-left-behind", "dark-mode") ? "dark-mode" : ""}`],
             width: 700,
             height: 820,
             tabs: [{ navSelector: ".sheet-tabs", contentSelector: ".sheet-body", initial: "core" }],
@@ -106,8 +106,8 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
     }
 
     get template() {
-        const path = "systems/afmbe-jesuisfrog/templates";
-        if (!game.user.isGM && this.actor.limited) return "systems/afmbe-jesuisfrog/templates/limited-character-sheet.hbs";
+        const path = "systems/afmbe-left-behind/templates";
+        if (!game.user.isGM && this.actor.limited) return "systems/afmbe-left-behind/templates/limited-character-sheet.hbs";
         return `${path}/${this.actor.type}-sheet.hbs`;
     }
 
@@ -245,8 +245,8 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         }
         const penaltyHtml = penaltyTags.length ? penaltyTags.join(' | ') : noneLabel
 
-        let mode = game.settings.get("afmbe-jesuisfrog", "dark-mode") ? "dark-mode" : ""
-        let dialogOptions = { classes: ["dialog", "afmbe-jesuisfrog", mode] }
+        let mode = game.settings.get("afmbe-left-behind", "dark-mode") ? "dark-mode" : ""
+        let dialogOptions = { classes: ["dialog", "afmbe-left-behind", mode] }
 
         const content = `<div class="afmbe-dialog-menu">
                             <h2>${dialogHeader}</h2>
@@ -470,7 +470,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                 } }
             },
             default: 'attack'
-        }, { classes: ['dialog', 'afmbe-jesuisfrog', game.settings.get('afmbe-jesuisfrog', 'dark-mode') ? 'dark-mode' : ''] }).render(true)
+        }, { classes: ['dialog', 'afmbe-left-behind', game.settings.get('afmbe-left-behind', 'dark-mode') ? 'dark-mode' : ''] }).render(true)
     }
 
     async _onDamageRoll(event) {
@@ -485,8 +485,8 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         const cancelLabel = game.i18n.localize("AFMBE.Dialog.Button.Cancel")
         const rollLabel = game.i18n.localize("AFMBE.Dialog.Button.Roll")
 
-        let mode = game.settings.get("afmbe-jesuisfrog", "dark-mode") ? "dark-mode" : ""
-        let dialogOptions = { classes: ["dialog", "afmbe-jesuisfrog", mode] }
+        let mode = game.settings.get("afmbe-left-behind", "dark-mode") ? "dark-mode" : ""
+        let dialogOptions = { classes: ["dialog", "afmbe-left-behind", mode] }
 
         const content = `<div class="afmbe-dialog-menu">
 
@@ -558,7 +558,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                             speaker: ChatMessage.getSpeaker({ actor: this.actor }),
                             content: chatContent,
                             rolls: [roll],
-                            ...(target ? { flags: { 'afmbe-jesuisfrog': { armorDamage: {
+                            ...(target ? { flags: { 'afmbe-left-behind': { armorDamage: {
                                 targetUuid: target.uuid,
                                 targetName: target.name,
                                 damage: roll.total,

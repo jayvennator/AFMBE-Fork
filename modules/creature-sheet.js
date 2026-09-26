@@ -3,7 +3,7 @@ export class afmbeCreatureSheet extends foundry.appv1.sheets.ActorSheet {
     /** @override */
     static get defaultOptions() {
         return foundry.utils.mergeObject(super.defaultOptions, {
-            classes: ["afmbe-jesuisfrog", "sheet", "actor", `${game.settings.get("afmbe-jesuisfrog", "dark-mode") ? "dark-mode" : ""}`],
+            classes: ["afmbe-left-behind", "sheet", "actor", `${game.settings.get("afmbe-left-behind", "dark-mode") ? "dark-mode" : ""}`],
             width: 700,
             height: 820,
             tabs: [{ navSelector: ".sheet-tabs", contentSelector: ".sheet-body", initial: "core" }],
@@ -92,8 +92,8 @@ export class afmbeCreatureSheet extends foundry.appv1.sheets.ActorSheet {
     }
 
     get template() {
-        const path = "systems/afmbe-jesuisfrog/templates";
-        if (!game.user.isGM && this.actor.limited) return "systems/afmbe-jesuisfrog/templates/limited-creature-sheet.hbs";
+        const path = "systems/afmbe-left-behind/templates";
+        if (!game.user.isGM && this.actor.limited) return "systems/afmbe-left-behind/templates/limited-creature-sheet.hbs";
         return `${path}/${this.actor.type}-sheet.hbs`;
     }
 
@@ -185,8 +185,8 @@ export class afmbeCreatureSheet extends foundry.appv1.sheets.ActorSheet {
                                                 <option value="${skill.id}">${skill.name} ${skill.system.level}</option>`)
             .join("")
 
-        let mode = game.settings.get("afmbe-jesuisfrog", "dark-mode") ? "dark-mode" : ""
-        let dialogOptions = { classes: ["dialog", "afmbe-jesuisfrog", mode] }
+        let mode = game.settings.get("afmbe-left-behind", "dark-mode") ? "dark-mode" : ""
+        let dialogOptions = { classes: ["dialog", "afmbe-left-behind", mode] }
 
         const content = `<div class="afmbe-dialog-menu">
                             <h2>${dialogHeader}</h2>
@@ -334,8 +334,8 @@ export class afmbeCreatureSheet extends foundry.appv1.sheets.ActorSheet {
         const firingModeLabels = Object.fromEntries(firingModes.map(mode => [mode.value, mode.label]))
         const shotLabel = (count) => count === 1 ? game.i18n.format("AFMBE.Weapon.Shot.Single", { count }) : game.i18n.format("AFMBE.Weapon.Shot.Multiple", { count })
 
-        let mode = game.settings.get("afmbe-jesuisfrog", "dark-mode") ? "dark-mode" : ""
-        let dialogOptions = { classes: ["dialog", "afmbe-jesuisfrog", mode] }
+        let mode = game.settings.get("afmbe-left-behind", "dark-mode") ? "dark-mode" : ""
+        let dialogOptions = { classes: ["dialog", "afmbe-left-behind", mode] }
 
         const content = `<div class="afmbe-dialog-menu">
 

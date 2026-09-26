@@ -1,4 +1,4 @@
-const SYSTEM_ID = 'afmbe-jesuisfrog';
+const SYSTEM_ID = 'afmbe-left-behind';
 const applying = new Set();
 
 /** Use the same chat layout for a manual armor roll and an armor roll during damage. */
