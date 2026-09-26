@@ -1,0 +1,45 @@
+<div class="attribute-container">
+    <h2>{{localize 'AFMBE.Attributes.Secondary.Title'}}</h2>
+    <div class="resource-container">
+        <div class="resource">
+            <button type="button" class="reset-resource" data-resource="hp">{{localize 'AFMBE.Attributes.Secondary.LifePoints'}}</button>
+            <div class="resource-values secondaryAttribute">
+                <input type="number" name="system.secondaryAttributes.hp.value"
+                    value="{{actor.system.secondaryAttributes.hp.value}}">
+                /
+                <div>{{actor.system.secondaryAttributes.hp.max}}</div>
+            </div>
+        </div>
+        <div class="resource">
+            <button type="button" class="reset-resource" data-resource="endurance_points">{{localize 'AFMBE.Attributes.Secondary.Endurance'}}</button>
+            <div class="resource-values secondaryAttribute">
+                <input type="number" name="system.secondaryAttributes.endurance_points.value"
+                    value="{{actor.system.secondaryAttributes.endurance_points.value}}">
+                /
+                <div>{{actor.system.secondaryAttributes.endurance_points.max}}</div>
+            </div>
+        </div>
+        <div class="resource">
+            <button type="button" class="reset-resource" data-resource="essence">{{localize 'AFMBE.Attributes.Secondary.EssencePool'}}</button>
+            <div class="resource-values secondaryAttribute">
+                <input type="number" name="system.secondaryAttributes.essence.value"
+                    value="{{actor.system.secondaryAttributes.essence.value}}">
+                /
+                <div>{{actor.system.secondaryAttributes.essence.max}}</div>
+            </div>
+        </div>
+        <div class="resource">
+            <button type="button" class="no-focus">{{localize 'AFMBE.Attributes.Secondary.Speed'}}</button>
+            <div class="resource-values secondaryAttribute">
+                <div>{{actor.system.secondaryAttributes.speed.value}} {{localize 'AFMBE.Units.Mph'}}</div>
+                <div>[{{actor.system.secondaryAttributes.speed.halfValue}} {{localize 'AFMBE.Units.Mps'}}]</div>
+            </div>
+        </div>
+        <div class="resource">
+            <button type="button" class="no-focus">{{localize 'AFMBE.Attributes.Secondary.Initiative'}}</button>
+            <div class="resource-values secondaryAttribute">
+                <div>{{actor.system.secondaryAttributes.initiative.value}}</div>
+            </div>
+        </div>
+    </div>
+</div>

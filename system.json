@@ -1,0 +1,40 @@
+{
+  "id": "afmbe-jesuisfrog",
+  "title": "All Flesh Must Be Eaten by Jesuisfrog",
+  "description": "A digital system for playing AFMBE (All Flesh Must Be Eaten) by Eden Studios",
+  "version": "1.2",
+  "esmodules": [
+    "modules/main.js"
+  ],
+  "styles": [
+    {
+      "src": "styles/main.css"
+    }
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    },
+    {
+      "lang": "es",
+      "name": "Español",
+      "path": "lang/es.json"
+    }
+  ],
+  "primaryTokenAttribute": "hp",
+  "secondaryTokenAttribute": "endurance_points",
+  "url": "https://github.com/jayvennator/AFMBE-Fork",
+  "bugs": "https://github.com/jayvennator/AFMBE-Fork/issues",
+  "changelog": "https://github.com/jayvennator/AFMBE-Fork/blob/main/CHANGELOG.md",
+  "license": "LICENSE.txt",
+  "grid": {
+    "distance": 5,
+    "units": "ft"
+  },
+  "compatibility": {
+    "minimum": "13",
+    "maximum": "13"
+  }
+}

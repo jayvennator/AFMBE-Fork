@@ -1,0 +1,175 @@
+// Import Modules
+import { afmbeActorSheet } from "./actor-sheet.js";
+import { afmbeActor } from "./actor.js";
+import { afmbeItem } from "./item.js";
+import { afmbeItemSheet } from "./item-sheet.js";
+import { afmbeCreatureSheet } from "./creature-sheet.js"
+import { afmbevehicleSheet } from "./vehicle-sheet.js"
+import { registerTemplates } from "./register-templates.js";
+import { registerHandlebarsHelpers } from "./handlebars.js";
+
+/* -------------------------------------------- */
+/*  Foundry VTT Initialization                  */
+/* -------------------------------------------- */
+
+Hooks.once("init", async function () {
+    console.log(`Initializing AFMBE System`);
+    /**
+     * Set an initiative formula for the system
+     * @type {String}
+     */
+    CONFIG.Combat.initiative = {
+        formula: "1d10 + @secondaryAttributes.initiative.value",
+        decimals: 0
+    };
+
+    // Define Custom Entity Classes
+    CONFIG.Actor.documentClass = afmbeActor
+    CONFIG.Item.documentClass = afmbeItem
+
+    // Register Partial Templates
+    registerTemplates();
+    registerHandlebarsHelpers();
+
+    // Register sheet application classes
+    foundry.documents.collections.Actors.unregisterSheet("core", foundry.appv1.sheets.ActorSheet)
+
+    foundry.documents.collections.Actors.registerSheet("afmbe-jesuisfrog", afmbeActorSheet,
+        {
+            types: ["character"],
+            makeDefault: true,
+            label: game.i18n.localize("AFMBE.Sheets.Character")
+        })
+
+    foundry.documents.collections.Actors.registerSheet("afmbe-jesuisfrog", afmbeCreatureSheet,
+        {
+            types: ["creature"],
+            makeDefault: true,
+            label: game.i18n.localize("AFMBE.Sheets.Creature")
+        })
+
+    foundry.documents.collections.Actors.registerSheet("afmbe-jesuisfrog", afmbevehicleSheet,
+        {
+            types: ["vehicle"],
+            makeDefault: true,
+            label: game.i18n.localize("AFMBE.Sheets.Vehicle")
+        })
+
+    foundry.documents.collections.Items.registerSheet("afmbe-jesuisfrog", afmbeItemSheet,
+        {
+            makeDefault: true,
+            label: game.i18n.localize("AFMBE.Sheets.Item")
+        })
+
+
+    // Game Settings
+    function delayedReload() { window.setTimeout(() => location.reload(), 500) }
+
+    game.settings.register("afmbe-jesuisfrog", "dark-mode", {
+        name: game.i18n.localize("AFMBE.Settings.DarkMode.Name"),
+        hint: game.i18n.localize("AFMBE.Settings.DarkMode.Hint"),
+        scope: "world",
+        config: true,
+        default: false,
+        type: Boolean,
+        onChange: delayedReload
+    });
+})
+
+/* -------------------------------------------- */
+/*  Chat Message Hooks                          */
+/* -------------------------------------------- */
+
+// Hook for Re-Rolls on Lucky/Unlucky Rolls
+Hooks.on("renderChatMessage", (app, html, data) => {
+    let chatButton = html[0].querySelector("[data-roll='roll-again']")
+
+    if (chatButton != undefined && chatButton != null) {
+        chatButton.addEventListener('click', async () => {
+            let ruleTag = '';
+
+            let diceResult = Number(html[0].querySelector("[data-roll='dice-result']").textContent);
+            const ruleOfTenReroll = game.i18n.localize("AFMBE.Chat.RuleOfTenReroll")
+            const ruleOfOneReroll = game.i18n.localize("AFMBE.Chat.RuleOfOneReroll")
+            const ruleOfTenTitle = game.i18n.localize("AFMBE.Chat.RuleOfTenTitle")
+            const ruleOfOneTitle = game.i18n.localize("AFMBE.Chat.RuleOfOneTitle")
+            const rollAgainLabel = game.i18n.localize("AFMBE.Chat.RollAgain")
+            const rerollModifierLabel = game.i18n.localize("AFMBE.Chat.RerollModifier")
+            const newResultLabel = game.i18n.localize("AFMBE.Chat.NewResult")
+            const rollLabel = game.i18n.localize("AFMBE.Chat.Roll")
+
+            const triggeredRule = diceResult == 1 ? "one" : diceResult == 10 ? "ten" : null
+
+            if (triggeredRule === "ten") { ruleTag = ruleOfTenReroll }
+            if (triggeredRule === "one") { ruleTag = ruleOfOneReroll }
+
+            let roll = await new Roll('1d10').evaluate()
+
+            // Grab and Set Values from Previous Roll
+            let ruleOfMod = 0;
+            let attributeLabel = html[0].querySelector('h2').outerHTML + `${ruleTag}`
+
+            let diceTotal = Number(html[0].querySelector("[data-roll-value]").getAttribute('data-roll-value'))
+            if (triggeredRule === "one") {
+                if (roll.result == 1) {
+                    ruleOfMod = -5
+                } else {
+                    ruleOfMod = Number(roll.result) > 5 ? 0 : Number(roll.result) - 5
+                }
+                diceTotal -= 1
+            } else if (triggeredRule === "ten") {
+                ruleOfMod = Number(roll.result) > 5 ? Number(roll.result) - 5 : 0
+            }
+            if ((triggeredRule === "one" && (roll.result < 5)) || (triggeredRule === "ten")) {
+                diceResult = 0
+            }
+            diceTotal += diceResult + ruleOfMod;
+
+            let ruleOfDiv = ''
+
+            if (roll.result == 10 && triggeredRule !== "one") {
+                ruleOfDiv = `<h2 class="rule-of-chat-text">${ruleOfTenTitle}</h2>
+                            <button type="button" data-roll="roll-again" class="rule-of-ten">${rollAgainLabel}</button>`
+            }
+            if (roll.result == 1 && triggeredRule !== "ten") {
+                ruleOfDiv = `<h2 class="rule-of-chat-text">${ruleOfOneTitle}</h2>
+                            <button type="button" data-roll="roll-again" class="rule-of-one">${rollAgainLabel}</button>`
+            }
+
+            // Create Chat Content
+            let tags = []
+            let chatContent = `<form>
+                                    ${attributeLabel}
+
+                                    <table class="afmbe-chat-roll-table">
+                                        <thead>
+                                            <tr>
+                                                <th class="table-center-align">${rollLabel}</th>
+                                                <th class="table-center-align">${rerollModifierLabel}</th>
+                                                <th class="table-center-align">${newResultLabel}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td class="table-center-align" data-roll="dice-result">[[${roll.result}]]</td>
+                                                <td class="table-center-align" data-roll="modifier" data-mod="${ruleOfMod}">${ruleOfMod}</td>
+                                                <td class="table-center-align" data-roll="dice-total" data-roll-value="${diceTotal}">${diceTotal}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                    <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%;">
+                                        ${ruleOfDiv}
+                                    </div>
+                                </form>`
+
+            ChatMessage.create({
+                user: game.user.id,
+                speaker: ChatMessage.getSpeaker(),
+                flavor: `<div class="afmbe-tags-flex-container">${tags.join('')}</div>`,
+                content: chatContent,
+                rolls: [roll]
+            })
+        })
+    }
+})
