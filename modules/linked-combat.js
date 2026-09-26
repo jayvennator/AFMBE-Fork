@@ -1,16 +1,12 @@
 import { spendAction } from './action-economy.js';
 import { attributeBonus, skillBonus } from './consumables.js';
 import { damageType } from './damage-types.js';
+import { weaponCategory } from './weapon-feed.js';
 const SYSTEM_ID = 'afmbe-left-behind';
 const resolving = new Set();
 const rolling = new Set();
 const meleeTypes = new Set(['twoHanded', 'slashing', 'stabbing']);
-export function isMeleeAttack(weapon) {
-    if (weapon.system.attackMode === 'melee') return true;
-    if (weapon.system.attackMode === 'ranged') return false;
-    const type = damageType(weapon.system.damage_type);
-    return meleeTypes.has(type) || (!Number(weapon.system.range) && !Number(weapon.system.capacity?.max));
-}
+export function isMeleeAttack(weapon) { return weaponCategory(weapon) === 'melee'; }
 export function defenseOutcome(attack, mode, total) {
     if (mode === 'none') return { status: 'ready', blocked: false, result: 'No defense. The hit stands.' };
     if (attack.melee) {

@@ -1,6 +1,7 @@
 import { isMeleeAttack } from './linked-combat.js';
 import { meleeAttribute, meleePreview, prepareMeleeStrike } from './melee-actions.js';
 import { gunPreview, prepareGunShot } from './gun-actions.js';
+import { weaponCategory, feedSystem, compatibleLooseAmmo, loadInternalRound, unloadInternalRounds, removeMagazine } from './weapon-feed.js';
 import { actionPanel, actionState, spendAction, correctAction } from './action-economy.js';
 import { measureWeaponRange } from './weapon-range.js';
 import { damageType, hitBonus } from './damage-types.js';
@@ -68,6 +69,11 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
 
                 case "weapon":
                     i.isMeleeWeapon = isMeleeAttack(i)
+                    i.weaponCategory = weaponCategory(i)
+                    i.feed = feedSystem(i)
+                    i.isBow = weaponCategory(i) === "bow"
+                    i.hasInsertedMagazine = Boolean(i.system.loadedMagazineId)
+                    i.canUnload = ["internal", "cylinder", "single"].includes(i.feed) && Number(i.system.capacity?.value) > 0
                     weapon.push(i)
                     break
 
@@ -122,6 +128,10 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         actorData.item = item
         actorData.equippedItem = equippedItem
         actorData.weapon = weapon
+        actorData.meleeWeapons = weapon.filter(i => i.weaponCategory === "melee")
+        actorData.firearms = weapon.filter(i => i.weaponCategory === "firearm")
+        actorData.bows = weapon.filter(i => ["bow", "crossbow"].includes(i.weaponCategory))
+        actorData.launchers = weapon.filter(i => i.weaponCategory === "launcher")
         actorData.magazine = magazine
         actorData.ammunition = ammunition
         actorData.armor = armor
@@ -152,6 +162,11 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         html.find('.attribute-roll').click(this._onAttributeRoll.bind(this))
         html.find('.attack-roll').click(this._onAttackRoll.bind(this))
         html.find('.reload-weapon').click(this._onReloadWeapon.bind(this))
+        html.find('.unload-weapon').click(this._onUnloadWeapon.bind(this))
+        html.find('.remove-magazine').click(async event => {
+            const weapon = this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId);
+            try { await removeMagazine(this.actor, weapon); } catch (error) { ui.notifications.warn(error.message); }
+        })
         html.find('.load-magazine').click(this._onLoadMagazine.bind(this))
         if (game.user.isGM) html.find('.damage-roll').click(this._onDamageRoll.bind(this))
         html.find('.toggleEquipped').click(this._onToggleEquipped.bind(this))
@@ -512,6 +527,21 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         event.preventDefault();
         const weapon = this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId);
         if (!weapon || !this.actor.isOwner) return;
+        const feed = feedSystem(weapon);
+        if (['internal', 'cylinder', 'single'].includes(feed)) {
+            if (weapon.system.loadedMagazineId) return ui.notifications.warn('Remove the inserted magazine before switching to direct loading.');
+            const ammo = compatibleLooseAmmo(this.actor, weapon);
+            if (!ammo.length) return ui.notifications.warn('No compatible loose ammunition. Set the same caliber or projectile on the weapon and ammunition.');
+            const esc = foundry.utils.escapeHTML;
+            new Dialog({ title: `Load one round: ${weapon.name}`, content: `<form><label>Loose ammunition</label><select name="ammo">${ammo.map(item => `<option value="${esc(item.id)}">${esc(item.name)} — ${item.system.qty} (${esc(item.system.ammoType)})</option>`).join('')}</select></form>`,
+                buttons: { cancel: { label: 'Cancel' }, load: { label: 'Load one (Help action)', callback: async html => {
+                    const selected = this.actor.items.get(html[0].querySelector('[name="ammo"]').value);
+                    try { await loadInternalRound(this.actor, weapon, selected); }
+                    catch (error) { ui.notifications.warn(error.message); }
+                } } }, default: 'load' }).render(true);
+            return;
+        }
+        if (feed !== 'legacy' && feed !== 'detachable') return ui.notifications.warn('This weapon draws ammunition directly when attacking.');
         const spare = compatibleMagazines(this.actor, weapon);
         if (!spare.length) { ui.notifications.warn('No compatible spare magazines. Set matching caliber on the weapon and magazine.'); return; }
         const esc = foundry.utils.escapeHTML;
@@ -520,6 +550,13 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                 try { await reloadWeapon(this.actor, weapon, this.actor.items.get(html[0].querySelector('[name="magazine"]').value)); }
                 catch (error) { console.error('AFMBE reload failed', error); ui.notifications.error(`Reload failed: ${error.message}`); }
             } } }, default: 'reload' }).render(true);
+    }
+
+    async _onUnloadWeapon(event) {
+        event.preventDefault();
+        const weapon = this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId);
+        try { await unloadInternalRounds(this.actor, weapon); }
+        catch (error) { ui.notifications.warn(error.message); }
     }
 
     async _onLoadMagazine(event) {
@@ -552,8 +589,10 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             `<option value="${escape(key)}" ${isMelee && key === defaultMeleeAttribute ? 'selected' : ''}>${escape(game.i18n.localize(`AFMBE.Attributes.Primary.${key[0].toUpperCase()}${key.slice(1)}`))}</option>`
         ).join('')
         const skillOptions = skills.map(item => `<option value="${escape(item.id)}">${escape(item.name)} (${Number(item.system.level) || 0})</option>`).join('')
-        const magazineMode = Boolean(weapon.system.usesMagazines)
-        const hasMagazine = !isMelee && (magazineMode || Number(weapon.system.capacity?.max) > 0)
+        const category = weaponCategory(weapon)
+        const feed = feedSystem(weapon)
+        const magazineMode = !isMelee && (feed === "detachable" || (feed === "legacy" && Boolean(weapon.system.usesMagazines)))
+        const hasMagazine = !isMelee && feed !== "direct" && (magazineMode || ["internal", "cylinder", "single"].includes(feed) || Number(weapon.system.capacity?.max) > 0)
         const gunState = !isMelee ? gunPreview(this.actor, weapon) : null
         const offensivePreview = actionState(this.actor)
         const rangePreview = isMelee ? { penalty: 0, note: "Melee range: target must be adjacent." } : measureWeaponRange(this.actor, weapon)
@@ -570,7 +609,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             <p>${isMelee ? 'Melee: target must be adjacent.' : `Range: ${rangeSummary}`}</p>
             ${isMelee ? `<p>Swings this action: ${meleeState.swings}/${meleeState.limit}; strain so far: ${meleeState.strain}. ${meleeState.nextAction ? `Next Offensive action requires a Constitution + skill task; Endurance ${meleeState.endurance} per swing.` : 'This action has room for another swing.'}</p>` : ''}
             <p>Offensive action: ${offensivePreview ? `used ${offensivePreview.counts.offensive}; repeat penalty ${-2 * offensivePreview.counts.offensive}` : 'outside combat (no repeat penalty)'}. Rechecked when rolled.</p>
-            ${!isMelee ? `<p>Semi-auto: one round per attack. Shot ${gunState.shot} this turn; ${gunState.shotsInAction}/${gunState.rateOfFire} shots in current Offensive action; next recoil ${gunState.recoilPenalty}; action penalty ${gunState.actionPenalty}.</p>` : ''}
+            ${!isMelee ? `<p>${category === 'bow' ? 'Bow' : category === 'crossbow' ? 'Crossbow' : 'Single shot attack'}: one projectile per attack. Shot ${gunState.shot} this turn; ${gunState.shotsInAction}/${gunState.rateOfFire} shots in current Offensive action; next recoil ${gunState.recoilPenalty}; action penalty ${gunState.actionPenalty}.</p>` : ''}
             ${hasMagazine ? `<p>Magazine: ${Number(weapon.system.capacity.value) || 0} / ${Number(weapon.system.capacity.max) || 0}</p>` : ''}
         </form>`
         new Dialog({
@@ -603,11 +642,17 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                         const meters = Math.hypot(source.center.x - targetToken.center.x, source.center.y - targetToken.center.y) / size * distance
                         if (meters > distance * 1.5) { ui.notifications.warn('Melee target is out of reach (more than one adjacent grid space).'); return }
                     }
-                    const activeMagazine = isMelee ? null : loadedMagazine(this.actor, weapon)
+                    const activeMagazine = magazineMode ? loadedMagazine(this.actor, weapon) : null
+                    if (!isMelee && weapon.system.loadedMagazineId && feed !== "detachable" && feed !== "legacy") { ui.notifications.warn("Remove the inserted magazine before switching feed systems."); return }
+                    const looseProjectile = feed === "direct" ? compatibleLooseAmmo(this.actor, weapon)[0] : null
+                    if (feed === "direct" && !looseProjectile) { ui.notifications.warn("No compatible arrows in loose ammunition."); return }
+                    if (feed === "single" && category === "crossbow" && Number(weapon.system.capacity?.max) > 1) { ui.notifications.warn("Crossbow capacity must be 1. Set it on the weapon sheet."); return }
                     const shots = hasMagazine ? 1 : 0
                     const remaining = magazineMode && !isMelee ? Number(activeMagazine?.system.rounds) : Number(weapon.system.capacity?.value)
                     if (!isMelee && magazineMode && (!activeMagazine || !Number.isSafeInteger(remaining) || remaining < 1)) { ui.notifications.warn(`${weapon.name} has no loaded rounds. Reload a magazine.`); return }
-                    const firedDamageType = isMelee ? (['twoHanded', 'slashing', 'stabbing'].includes(damageType(weapon.system.damage_type)) ? damageType(weapon.system.damage_type) : 'twoHanded') : magazineMode ? damageType(activeMagazine.system.ammoType) : damageType(weapon.system.damage_type)
+                    const rawWeaponDamageType = damageType(weapon.system.damage_type)
+                    const projectileDamageType = ['bow', 'crossbow'].includes(category) && ['twoHanded', 'slashing', 'stabbing'].includes(rawWeaponDamageType) ? 'none' : rawWeaponDamageType
+                    const firedDamageType = isMelee ? (['twoHanded', 'slashing', 'stabbing'].includes(damageType(weapon.system.damage_type)) ? damageType(weapon.system.damage_type) : 'twoHanded') : magazineMode ? damageType(activeMagazine.system.ammoType) : category === "crossbow" ? projectileDamageType : ["internal", "cylinder", "single"].includes(feed) ? damageType(weapon.system.loadedAmmoType || weapon.system.damage_type) : projectileDamageType
                     if (hasMagazine && (!Number.isInteger(shots) || shots < 1 || !Number.isFinite(remaining) || shots > remaining)) {
                         ui.notifications.warn(`Not enough ammunition in ${weapon.name} for that attack.`)
                         return
@@ -619,7 +664,9 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                         gunShot = isMelee ? null : await prepareGunShot(this.actor, weapon)
                         action = { penalty: isMelee ? meleeStrike.actionPenalty : gunShot.actionPenalty }
                     } catch (error) { ui.notifications.warn(error.message); return }
-                    if (!isMelee && magazineMode) {
+                    if (feed === 'direct') {
+                        await looseProjectile.update({ 'system.qty': Number(looseProjectile.system.qty) - 1 })
+                    } else if (!isMelee && magazineMode) {
                         await activeMagazine.update({ 'system.rounds': remaining - 1 })
                         await weapon.update({ 'system.capacity.value': remaining - 1 })
                     } else if (hasMagazine) await weapon.update({ 'system.capacity.value': remaining - shots })
@@ -629,7 +676,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                     const success = total >= 9
                     const degrees = success ? Math.floor((total - 9) / 2) + 1 : 0
                     const locationName = form.elements.location.selectedOptions[0].textContent
-                    const ammoNote = hasMagazine ? `<p>1 ${escape(firedDamageType)} round fired (semi-auto); ${weapon.system.capacity.value}/${weapon.system.capacity.max} remaining.</p>` : ''
+                    const ammoNote = feed === 'direct' ? `<p>1 ${escape(looseProjectile.name)} used; ${looseProjectile.system.qty} remain.</p>` : hasMagazine ? `<p>1 ${escape(firedDamageType)} round fired; ${weapon.system.capacity.value}/${weapon.system.capacity.max} remaining.</p>` : ''
                     const rangeDetail = isMelee ? `melee swing ${meleeStrike.swing}/${meleePreview(this.actor, weapon).limit}; strain ${meleeStrike.strainPenalty}; Endurance spent ${meleeStrike.enduranceSpent}` : `shot ${gunShot.shot} this turn (${gunShot.shotsInAction}/${gunShot.rateOfFire} this action), recoil ${gunShot.recoilPenalty}; ` + (range.note ? 'range unconfigured (0)' : `range ${range.penalty} (${range.distance.toFixed(1)} m / ${range.normalRange} m)` )
                     const content = `<h2>${escape(weapon.name)}</h2><div class="afmbe-roll-kind">Attack</div><p>${escape(attributeKey)} ${attribute}, ${escape(skill?.name ?? 'No skill')} ${skillLevel}, ${escape(locationName)}, modifier ${modifier}, ${isMelee ? 'melee' : 'ammo'} ${ammoHitBonus >= 0 ? "+" : ""}${ammoHitBonus}, ${rangeDetail}, action ${action.penalty}</p><p>Roll ${roll.total} + modifiers = <strong>${total}</strong> vs 9 — <strong>${success ? `Hit (${degrees} degree${degrees === 1 ? '' : 's'})` : 'Miss'}</strong></p>${ammoNote}`
                     await ChatMessage.create({ user: game.user.id, speaker: ChatMessage.getSpeaker({ actor: this.actor }),

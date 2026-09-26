@@ -16,6 +16,7 @@ export function registerTemplates() {
         "systems/afmbe-left-behind/templates/components/powers.hbs",
         "systems/afmbe-left-behind/templates/components/skills.hbs",
         "systems/afmbe-left-behind/templates/components/weapons.hbs",
+        "systems/afmbe-left-behind/templates/components/weapon-row.hbs",
         "systems/afmbe-left-behind/templates/components/ammunition.hbs",
         "systems/afmbe-left-behind/templates/components/armor.hbs",
         "systems/afmbe-left-behind/templates/components/qualities.hbs",

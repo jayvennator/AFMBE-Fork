@@ -1,41 +1,21 @@
-<div class="weapon-table">
-    <h2 class="header-with-button">
-        <button type="button" class="create-item" data-create="weapon">+</button>
-        <span>{{localize 'AFMBE.Weapons.Title'}}</span>
-    </h2>
-    <table>
-        <thead>
-            <tr>
-                <th class="table-left-align">{{localize 'AFMBE.Common.Name'}}</th>
-                <th>{{localize 'AFMBE.Common.Damage'}}</th>
-                <th>{{localize 'AFMBE.Common.Capacity'}}</th>
-                <th>{{localize 'AFMBE.Common.EV'}}</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            {{#each actor.weapon as |item id|}}
-            <tr class="item" data-item-id="{{item._id}}">
-                <td>
-                    <div class="item-name-flex-container">
-                        <button type="button" class="attack-roll" title="Roll attack">Attack</button>
-                        {{#unless item.isMeleeWeapon}}{{#if item.system.capacity.max}}<button type="button" class="reload-weapon" title="Swap a compatible magazine; spends a Help action in combat">Reload</button>{{/if}}{{/unless}}
-                        {{#if @root.isGM}}<button type="button" class="damage-roll" title="GM manual damage">Manual Damage</button>{{/if}}
-                        <div class="item-name">{{item.name}}</div>
-                    </div>
-                </td>
-                <td class="table-center-align">{{item.system.damage_string}}</td>
-                <td>
-                    <div class="table-flex-cell">
-                        <div>{{#if item.isMeleeWeapon}}—{{else}}{{item.system.capacity.value}}{{/if}}</div>
-                        {{#unless item.isMeleeWeapon}}/<div>{{item.system.capacity.max}}</div>{{/unless}}
-                    </div>
-                </td>
-                <td class="table-center-align">{{item.system.encumbrance}}</td>
-                <td class="table-center-align"><a class="item-control item-delete" title="{{localize 'AFMBE.Items.Delete'}}"><i
-                            class="fas fa-trash"></i></a></td>
-            </tr>
-            {{/each}}
-        </tbody>
-    </table>
-</div>
+<div class="weapon-table"><h2 class="header-with-button"><button type="button" class="create-item" data-create="weapon">+</button><span>Weapons</span></h2><p>Pick a category on each weapon sheet to show relevant settings. Auto preserves legacy items.</p></div>
+<div class="weapon-table"><h2>Melee Weapons</h2><table><thead><tr><th class="table-left-align">Name</th><th>Damage</th><th>Capacity</th><th>EV</th><th></th></tr></thead><tbody>
+{{#each actor.meleeWeapons as |item|}}
+{{> "systems/afmbe-left-behind/templates/components/weapon-row.hbs" item=item}}
+{{/each}}
+</tbody></table></div>
+<div class="weapon-table"><h2>Firearms</h2><table><thead><tr><th class="table-left-align">Name</th><th>Damage</th><th>Capacity</th><th>EV</th><th></th></tr></thead><tbody>
+{{#each actor.firearms as |item|}}
+{{> "systems/afmbe-left-behind/templates/components/weapon-row.hbs" item=item}}
+{{/each}}
+</tbody></table></div>
+<div class="weapon-table"><h2>Bows & Crossbows</h2><table><thead><tr><th class="table-left-align">Name</th><th>Damage</th><th>Capacity</th><th>EV</th><th></th></tr></thead><tbody>
+{{#each actor.bows as |item|}}
+{{> "systems/afmbe-left-behind/templates/components/weapon-row.hbs" item=item}}
+{{/each}}
+</tbody></table></div>
+<div class="weapon-table"><h2>Launchers</h2><table><thead><tr><th class="table-left-align">Name</th><th>Damage</th><th>Capacity</th><th>EV</th><th></th></tr></thead><tbody>
+{{#each actor.launchers as |item|}}
+{{> "systems/afmbe-left-behind/templates/components/weapon-row.hbs" item=item}}
+{{/each}}
+</tbody></table></div>

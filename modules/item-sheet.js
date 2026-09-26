@@ -1,5 +1,6 @@
 import { damageType } from './damage-types.js';
 import { CALIBERS, caliberSelection } from './calibers.js';
+import { weaponCategory, feedSystem } from './weapon-feed.js';
 export class afmbeItemSheet extends foundry.appv1.sheets.ItemSheet {
 
     /** @override */
@@ -29,9 +30,17 @@ export class afmbeItemSheet extends foundry.appv1.sheets.ItemSheet {
         data.normalizedDamageType = damageType(this.item.system.damage_type);
         data.caliberOptions = CALIBERS;
         data.attackModeOptions = { auto: 'Auto (legacy)', melee: 'Melee', ranged: 'Ranged' };
+        data.weaponCategoryOptions = { auto: 'Auto (existing weapon)', melee: 'Melee', firearm: 'Firearm', bow: 'Bow', crossbow: 'Crossbow', launcher: 'Launcher' };
+        data.feedSystemOptions = { auto: 'Auto (existing capacity/magazine)', detachable: 'Detachable magazine', internal: 'Internal magazine / tube', cylinder: 'Revolver cylinder', single: 'Single shot / crossbow' };
+        data.showMeleeFields = weaponCategory(this.item) === 'melee';
+        data.showRangedFields = weaponCategory(this.item) !== 'melee';
+        data.showGunFields = ['firearm', 'launcher'].includes(weaponCategory(this.item));
+        data.showFeedFields = data.showGunFields || weaponCategory(this.item) === 'crossbow';
+        data.showCapacityFields = data.showRangedFields && weaponCategory(this.item) !== 'bow';
+        data.effectiveFeed = feedSystem(this.item);
         data.meleeAttributeOptions = { '': 'Auto (legacy)', strength: 'Strength', dexterity: 'Dexterity' };
         data.selectedCaliber = caliberSelection(this.item.type === "weapon" ? this.item.system.ammo_type : this.item.system.caliber);
-        data.ammoDamageTypes = {"bullets": "Normal Bullet", "hollowPoint": "Hollow Point", "armorPiercing": "Armor Piercing", "slug": "Slug", "buckshot": "Buckshot", "birdshot": "Birdshot", "shotgun": "Shotgun", "explosive": "Explosive", "poison": "Poison", "corrosive": "Corrosive"};
+        data.ammoDamageTypes = {"none": "Standard projectile", "bullets": "Normal Bullet", "hollowPoint": "Hollow Point", "armorPiercing": "Armor Piercing", "slug": "Slug", "buckshot": "Buckshot", "birdshot": "Birdshot", "shotgun": "Shotgun", "explosive": "Explosive", "poison": "Poison", "corrosive": "Corrosive"};
         data.skillOptions = Object.fromEntries((this.item.parent?.items ?? []).filter(item => item.type === "skill").map(item => [item.name, item.name]));
         data.selectedSkillName = this.item.system.skillName || this.item.parent?.items.get(this.item.system.skillId)?.name || "";
         data.isGM = game.user.isGM;
@@ -44,6 +53,16 @@ export class afmbeItemSheet extends foundry.appv1.sheets.ItemSheet {
     /** @override */
     activateListeners(html) {
         super.activateListeners(html);
+        html.find('[name="system.weaponCategory"], [name="system.feedSystem"]').change(() => {
+            // Foundry saves the selection normally; preview the relevant rows immediately.
+            const category = html.find('[name="system.weaponCategory"]').val();
+            const effective = category === 'auto' ? weaponCategory(this.item) : category;
+            html.find('.melee-weapon-field').toggle(effective === 'melee');
+            html.find('.ranged-weapon-field').toggle(effective !== 'melee');
+            html.find('.gun-weapon-field').toggle(['firearm','launcher'].includes(effective));
+            html.find('.feed-weapon-field').toggle(['firearm','launcher','crossbow'].includes(effective));
+            html.find('.capacity-weapon-field').toggle(effective !== 'melee' && effective !== 'bow');
+        });
         html.find('.caliber-presets').change(event => {
             const field = event.currentTarget.closest('td')?.querySelector('.caliber-value');
             if (field && event.currentTarget.value) { field.value = event.currentTarget.value; field.dispatchEvent(new Event('change', { bubbles: true })); }

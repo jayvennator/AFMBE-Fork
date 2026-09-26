@@ -1,0 +1,24 @@
+<tr class="item" data-item-id="{{item._id}}">
+                <td>
+                    <div class="item-name-flex-container">
+                        <button type="button" class="attack-roll" title="Roll attack">Attack</button>
+                        {{#unless item.isMeleeWeapon}}
+                        {{#unless item.isBow}}<button type="button" class="reload-weapon" title="Load ammunition; spends a Help action in combat">Reload</button>{{/unless}}
+                        {{#if item.hasInsertedMagazine}}<button type="button" class="remove-magazine" title="Remove inserted magazine without discarding its rounds">Remove mag</button>{{/if}}
+                        {{#if item.canUnload}}<button type="button" class="unload-weapon" title="Return internal rounds to loose ammunition">Unload</button>{{/if}}
+                        {{/unless}}
+                        {{#if @root.isGM}}<button type="button" class="damage-roll" title="GM manual damage">Manual Damage</button>{{/if}}
+                        <div class="item-name">{{item.name}}</div>
+                    </div>
+                </td>
+                <td class="table-center-align">{{item.system.damage_string}}</td>
+                <td>
+                    <div class="table-flex-cell">
+                        <div>{{#if item.isMeleeWeapon}}—{{else}}{{#if item.isBow}}—{{else}}{{item.system.capacity.value}}{{/if}}{{/if}}</div>
+                        {{#unless item.isMeleeWeapon}}{{#unless item.isBow}}/<div>{{item.system.capacity.max}}</div>{{/unless}}{{/unless}}
+                    </div>
+                </td>
+                <td class="table-center-align">{{item.system.encumbrance}}</td>
+                <td class="table-center-align"><a class="item-control item-delete" title="{{localize 'AFMBE.Items.Delete'}}"><i
+                            class="fas fa-trash"></i></a></td>
+            </tr>

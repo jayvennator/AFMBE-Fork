@@ -17,18 +17,18 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Foundry package
         run: |
-          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.20.zip" . -x '.git/*' '.github/*'
+          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.21.zip" . -x '.git/*' '.github/*'
           cp system.json "$RUNNER_TEMP/system.json"
-          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.20.zip" system.json | python3 -m json.tool >/dev/null
-          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.20.zip"
+          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.21.zip" system.json | python3 -m json.tool >/dev/null
+          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.21.zip"
       - name: Publish prerelease
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.2.1-test.20 \
-            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.20.zip" \
+          gh release create v1.2.1-test.21 \
+            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.21.zip" \
             "$RUNNER_TEMP/system.json" \
             --target "$GITHUB_SHA" \
-            --title "AFMBE: Left Behind V13 semi-auto recoil test 20" \
-            --notes "Foundry V13 build 351 test. Adds semi-auto Rate of Fire and per-weapon cumulative recoil each turn. One round and one attack roll per click; action penalties remain separate." \
+            --title "AFMBE: Left Behind V13 weapon feeds test 21" \
+            --notes "Foundry V13 build 351 test. Adds weapon categories, grouped actor sheet, and detachable, internal, cylinder, bow and crossbow ammunition feeds. Internal loading spends a Help action per round." \
             --prerelease
