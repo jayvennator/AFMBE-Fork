@@ -141,6 +141,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         html.find('.end-consumable').click(async event => {
             await endConsumableEffect(this.actor, event.currentTarget.dataset.effectId);
         })
+        html.find('.roll-combat-task').click(this._onCombatTaskRoll.bind(this));
         html.find('.spend-action').click(async event => {
             const type = event.currentTarget.dataset.actionType;
             try {
@@ -433,6 +434,60 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
     }
 
 
+
+    _onCombatTaskRoll(event) {
+        event.preventDefault();
+        if (!this.actor.isOwner) return;
+        const type = event.currentTarget.dataset.actionType;
+        if (!['defensive', 'help'].includes(type)) return;
+        const escape = value => foundry.utils.escapeHTML(String(value ?? ''));
+        const attributes = this.actor.system.primaryAttributes ?? {};
+        const options = Object.keys(attributes).map(key => `<option value="${escape(key)}" ${key === (type === 'defensive' ? 'dexterity' : 'intelligence') ? 'selected' : ''}>${escape(game.i18n.localize(`AFMBE.Attributes.Primary.${key[0].toUpperCase()}${key.slice(1)}`))}</option>`).join('');
+        const skills = this.actor.items.filter(item => item.type === 'skill');
+        const skillOptions = skills.map(item => `<option value="${escape(item.id)}">${escape(item.name)} (${Number(item.system.level) || 0})</option>`).join('');
+        const preview = actionState(this.actor);
+        const content = `<form class="afmbe-combat-task-dialog">
+            ${type === 'defensive' ? `<div class="form-group"><label>Defense</label><select name="mode">
+                <option value="dodge">Dodge melee (beat attack total)</option>
+                <option value="block">Block melee (9 or more; halves damage)</option>
+                <option value="duck">Duck gunfire (9 or more; attacker −2)</option>
+            </select></div><div class="form-group"><label>Incoming attack total (needed for melee dodge)</label><input type="number" name="attackTotal" min="1" step="1"></div>` : ''}
+            <div class="form-group"><label>Attribute</label><select name="attribute">${options}</select></div>
+            <div class="form-group"><label>Skill</label><select name="skill"><option value="">None</option>${skillOptions}</select></div>
+            <div class="form-group"><label>Other modifier</label><input type="number" name="modifier" value="0" step="1"></div>
+            <p>Next ${type} action penalty: ${preview ? -2 * preview.counts[type] : 0}. Rechecked when rolled.</p>
+        </form>`;
+        new Dialog({ title: type === 'defensive' ? 'Defend' : 'Help action', content, buttons: {
+            cancel: { label: 'Cancel' },
+            roll: { label: 'Roll', callback: async html => {
+                const form = html[0].querySelector('form');
+                const mode = type === 'defensive' ? form.elements.mode.value : 'help';
+                const attackTotal = Number(form.elements.attackTotal?.value);
+                if (mode === 'dodge' && (!Number.isFinite(attackTotal) || attackTotal < 1)) {
+                    ui.notifications.warn('Enter the incoming attack total to resolve a melee dodge.');
+                    return;
+                }
+                const modifier = Number(form.elements.modifier.value);
+                if (!Number.isFinite(modifier)) { ui.notifications.warn('Enter a valid modifier.'); return; }
+                const attributeKey = form.elements.attribute.value;
+                const attribute = (Number(attributes[attributeKey]?.value) || 0) + attributeBonus(this.actor, attributeKey);
+                const skill = this.actor.items.get(form.elements.skill.value);
+                const skillValue = (Number(skill?.system.level) || 0) + skillBonus(this.actor, skill);
+                let action;
+                try { action = await spendAction(this.actor, type); }
+                catch (error) { ui.notifications.warn(error.message); return; }
+                const roll = await new Roll('1d10').evaluate();
+                const total = roll.total + attribute + skillValue + modifier + action.penalty;
+                const result = mode === 'dodge' ? (total > attackTotal ? 'Dodge succeeds; avoid this melee hit.' : 'Dodge fails.') :
+                    mode === 'block' ? (total >= 9 ? 'Block succeeds; halve this melee hit’s damage.' : 'Block fails.') :
+                    mode === 'duck' ? (total >= 9 ? 'Duck succeeds; attacker takes −2 to hit.' : 'Duck fails.') :
+                    (total >= 9 ? 'Success (9+).' : 'Failure (below 9).');
+                await ChatMessage.create({ user: game.user.id, speaker: ChatMessage.getSpeaker({ actor: this.actor }), rolls: [roll],
+                    content: `<h2>${escape(this.actor.name)}: ${escape(mode === 'help' ? 'Help action' : mode === 'dodge' ? 'Melee dodge' : mode === 'block' ? 'Melee block' : 'Duck gunfire')}</h2>` +
+                        `<p>Roll ${roll.total} + ${escape(attributeKey)} ${attribute} + ${escape(skill?.name ?? 'no skill')} ${skillValue} + modifier ${modifier} + action penalty ${action.penalty} = <strong>${total}</strong>${mode === 'dodge' ? ` vs attack ${attackTotal}` : ' vs 9'}</p><p><strong>${escape(result)}</strong></p>` });
+            } }
+        }, default: 'roll' }, { classes: ['dialog', 'afmbe-left-behind', game.settings.get('afmbe-left-behind', 'dark-mode') ? 'dark-mode' : ''] }).render(true);
+    }
 
     async _onAttackRoll(event) {
         event.preventDefault()

@@ -1,11 +1,13 @@
 {{#if actor.actionEconomy}}
 <div class="afmbe-action-tracker">
     <h2>Combat actions</h2>
-    <p>One free action of each type per turn. Each repeat is −2. Attack spends Offensive automatically.</p>
+    <p>One free action of each type per turn. Each repeat is −2. Attack spends Offensive automatically. Defend and Roll help spend their action when rolled. Use Mark only for actions handled elsewhere.</p>
     <div class="afmbe-action-grid">
     {{#each actor.actionEconomy.rows as |row|}}
         <div class="afmbe-action-row"><strong>{{row.label}}</strong> <span>Used: {{row.used}} · Next: {{row.penalty}}</span>
-            <button type="button" class="spend-action" data-action-type="{{row.type}}">Spend</button>
+            {{#if row.defensive}}<button type="button" class="roll-combat-task" data-action-type="defensive">Defend</button>{{/if}}
+            {{#if row.help}}<button type="button" class="roll-combat-task" data-action-type="help">Roll help</button>{{/if}}
+            <button type="button" class="spend-action" data-action-type="{{row.type}}" title="Mark an action handled outside this sheet">Mark</button>
             {{#if ../isGM}}<button type="button" class="correct-action" data-action-type="{{row.type}}" title="Undo one action">−</button>{{/if}}
         </div>
     {{/each}}

@@ -28,7 +28,7 @@ export function actionState(actor) {
 export function actionPanel(actor) {
     const state = actionState(actor);
     if (!state) return null;
-    return { rows: ACTION_TYPES.map(type => ({ type, label: labels[type], used: state.counts[type], penalty: -2 * state.counts[type] })) };
+    return { rows: ACTION_TYPES.map(type => ({ type, label: labels[type], used: state.counts[type], penalty: -2 * state.counts[type], defensive: type === 'defensive', help: type === 'help'  })) };
 }
 
 export async function spendAction(actor, type) {
