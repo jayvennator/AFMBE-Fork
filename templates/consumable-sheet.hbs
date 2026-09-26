@@ -7,6 +7,8 @@
 <tr><th>Attribute</th><td><select name="system.attribute"><option value="">None (use skill below)</option>{{#selectOptions attributeOptions selected=item.system.attribute}}{{/selectOptions}}</select></td></tr>
 {{#if hasActor}}<tr><th>Skill</th><td><select name="system.skillName"><option value="">None</option>{{#selectOptions skillOptions selected=selectedSkillName}}{{/selectOptions}}</select></td></tr>{{else}}<tr><th>Skill name</th><td><input type="text" name="system.skillName" value="{{item.system.skillName}}" placeholder="Exact skill name on the character"></td></tr>{{/if}}
 <tr><th>Duration (combat rounds)</th><td><input type="number" name="system.duration" min="0" max="100" step="1" value="{{item.system.duration}}"></td></tr>
+<tr><th>Crash penalty</th><td><input type="number" name="system.crashPenalty" min="0" max="100" step="1" value="{{item.system.crashPenalty}}"></td></tr>
+<tr><th>Crash duration (rounds)</th><td><input type="number" name="system.crashDuration" min="0" max="100" step="1" value="{{item.system.crashDuration}}"></td></tr>
 <tr><th>Encumbrance</th><td><input type="number" name="system.encumbrance" value="{{item.system.encumbrance}}"></td></tr>
-</tbody></table><p>Select an attribute or skill. Attribute takes priority. Standalone items match skill names when used; names must match the character’s skill. Healing applies immediately.</p></div>
+</tbody></table><p>Select an attribute or skill. Attribute takes priority. Standalone items match skill names when used; names must match the character’s skill. The crash applies a negative bonus to the same attribute or skill when the boost ends. Set either crash field to 0 to disable it. Healing applies immediately.</p></div>
 {{> "systems/afmbe-left-behind/templates/components/item-description-sidebar.hbs"}}</section></form>

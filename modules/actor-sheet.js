@@ -1,4 +1,4 @@
-import { activeBonuses, attributeBonus, skillBonus, useConsumable, CONSUMABLE_FLAG } from './consumables.js';
+import { activeBonuses, attributeBonus, skillBonus, useConsumable, endConsumableEffect } from './consumables.js';
 import { applyArmorDamage, postArmorRoll } from './armor-damage.js';
 
 export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
@@ -106,7 +106,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         actorData.weapon = weapon
         actorData.armor = armor
         actorData.consumable = consumable
-        actorData.activeConsumables = activeBonuses(this.actor)
+        actorData.activeConsumables = activeBonuses(this.actor).map(effect => ({ ...effect, willCrash: effect.phase !== "crash" && Number(effect.crashPenalty) > 0 && Number(effect.crashDuration) > 0 }))
         actorData.power = power
         actorData.quality = quality
         actorData.skill = skill
@@ -135,9 +135,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         html.find('.armor-button-cell button').click(this._onArmorRoll.bind(this))
         html.find('.use-consumable').click(event => useConsumable(this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)))
         html.find('.end-consumable').click(async event => {
-            if (!this.actor.isOwner) return;
-            const remaining = activeBonuses(this.actor).filter(effect => effect.id !== event.currentTarget.dataset.effectId);
-            await this.actor.setFlag(CONSUMABLE_FLAG, 'consumableEffects', remaining);
+            await endConsumableEffect(this.actor, event.currentTarget.dataset.effectId);
         })
         html.find('.reset-resource').click(this._onResetResource.bind(this))
 

@@ -17,18 +17,18 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Foundry package
         run: |
-          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.8.zip" . -x '.git/*' '.github/*'
+          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.9.zip" . -x '.git/*' '.github/*'
           cp system.json "$RUNNER_TEMP/system.json"
-          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.8.zip" system.json | python3 -m json.tool >/dev/null
-          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.8.zip"
+          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.9.zip" system.json | python3 -m json.tool >/dev/null
+          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.9.zip"
       - name: Publish prerelease
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.2.1-test.8 \
-            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.8.zip" \
+          gh release create v1.2.1-test.9 \
+            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.9.zip" \
             "$RUNNER_TEMP/system.json" \
             --target "$GITHUB_SHA" \
-            --title "AFMBE: Left Behind V13 skill selection test 8" \
-            --notes "Foundry V13 build 351 test. Allows standalone consumables to specify a skill by name and resolves it against the actor when used. Embedded consumables retain a skill dropdown." \
+            --title "AFMBE: Left Behind V13 stim crash test 9" \
+            --notes "Foundry V13 build 351 test. Adds configurable post-stim crash penalties to temporary attribute and skill boosts, with timed expiry and manual ending." \
             --prerelease

@@ -348,7 +348,9 @@
             "skillId": "",
             "bonus": 0,
             "duration": 3,
-            "skillName": ""
+            "skillName": "",
+            "crashPenalty": 0,
+            "crashDuration": 0
         }
     }
 }
