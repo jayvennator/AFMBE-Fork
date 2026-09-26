@@ -1,4 +1,4 @@
-import { applyArmorDamage } from './armor-damage.js';
+import { applyArmorDamage, postArmorRoll } from './armor-damage.js';
 
 export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
 
@@ -459,7 +459,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                     const degrees = success ? Math.floor((total - 9) / 2) + 1 : 0
                     const locationName = form.elements.location.selectedOptions[0].textContent
                     const ammoNote = hasMagazine ? `<p>${shots} round${shots === 1 ? '' : 's'} fired (${escape(firingModes.find(mode => mode.value === form.elements.firingMode.value)?.label ?? '')}); ${weapon.system.capacity.value}/${weapon.system.capacity.max} remaining.</p>` : ''
-                    const content = `<h2>${escape(weapon.name)}: Attack</h2><p>${escape(attributeKey)} ${attribute}, ${escape(skill?.name ?? 'No skill')} ${skillLevel}, ${escape(locationName)}, modifier ${modifier}</p><p>Roll ${roll.total} + modifiers = <strong>${total}</strong> vs 9: <strong>${success ? `Hit (${degrees} degree${degrees === 1 ? '' : 's'})` : 'Miss'}</strong></p>${ammoNote}`
+                    const content = `<h2>${escape(weapon.name)}</h2><div class="afmbe-roll-kind">Attack</div><p>${escape(attributeKey)} ${attribute}, ${escape(skill?.name ?? 'No skill')} ${skillLevel}, ${escape(locationName)}, modifier ${modifier}</p><p>Roll ${roll.total} + modifiers = <strong>${total}</strong> vs 9 — <strong>${success ? `Hit (${degrees} degree${degrees === 1 ? '' : 's'})` : 'Miss'}</strong></p>${ammoNote}`
                     await ChatMessage.create({ user: game.user.id, speaker: ChatMessage.getSpeaker({ actor: this.actor }), content, rolls: [roll] })
                 } }
             },
@@ -521,13 +521,13 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
 
                         const roll = await new Roll(weapon.system.damage_string).evaluate()
 
-                        const damageRollHeader = game.i18n.format("AFMBE.Chat.DamageRollFor", { weapon: weapon.name })
                         const damageLabel = game.i18n.localize("AFMBE.Chat.Damage")
                         const typeLabel = game.i18n.localize("AFMBE.Chat.Type")
                         const detailLabel = game.i18n.localize("AFMBE.Chat.Detail")
 
                         let chatContent = `<div>
-                                                <h2>${damageRollHeader}</h2>
+                                                <h2>Damage Roll</h2>
+                                                <div class="afmbe-roll-kind">${foundry.utils.escapeHTML(weapon.name)}</div>
 
                                                 <table class="afmbe-chat-roll-table">
                                                     <thead>
@@ -579,32 +579,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
 
         let roll = await new Roll(equippedItem.system.armor_value).evaluate()
 
-        // Create Chat Content
-        let chatContent = `<div>
-                                <h2>${game.i18n.format("AFMBE.Chat.ArmorRollFor", { armor: equippedItem.name })}</h2>
-
-                                <table class="afmbe-chat-roll-table">
-                                    <thead>
-                                        <tr>
-                                            <th class="table-center-align">${game.i18n.localize("AFMBE.Chat.Result")}</th>
-                                            <th class="table-center-align">${game.i18n.localize("AFMBE.Chat.Detail")}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td class="table-center-align">[[${roll.result}]]</td>
-                                            <td class="table-center-align">${equippedItem.system.armor_value}</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>`
-
-        ChatMessage.create({
-            user: game.user.id,
-            speaker: ChatMessage.getSpeaker(),
-            content: chatContent,
-            rolls: [roll]
-        })
+        await postArmorRoll(this.actor, equippedItem, roll, equippedItem.system.armor_value)
     }
 
     _onToggleEquipped(event) {

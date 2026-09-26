@@ -871,3 +871,4 @@
 /* Armor coverage controls on equipment sheets. */
 .afmbe-armor-coverage label { display: inline-flex; align-items: center; margin-right: 0.5rem; white-space: nowrap; }
 .afmbe-armor-coverage input { width: auto; margin-right: 0.2rem; }
+.afmbe-roll-kind { font-weight: bold; margin-bottom: 0.5rem; }
