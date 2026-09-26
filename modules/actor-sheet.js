@@ -1,5 +1,6 @@
 import { isMeleeAttack } from './linked-combat.js';
 import { meleeAttribute, meleePreview, prepareMeleeStrike } from './melee-actions.js';
+import { gunPreview, prepareGunShot } from './gun-actions.js';
 import { actionPanel, actionState, spendAction, correctAction } from './action-economy.js';
 import { measureWeaponRange } from './weapon-range.js';
 import { damageType, hitBonus } from './damage-types.js';
@@ -553,11 +554,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         const skillOptions = skills.map(item => `<option value="${escape(item.id)}">${escape(item.name)} (${Number(item.system.level) || 0})</option>`).join('')
         const magazineMode = Boolean(weapon.system.usesMagazines)
         const hasMagazine = !isMelee && (magazineMode || Number(weapon.system.capacity?.max) > 0)
-        const firingModes = [
-            { value: 'semi', label: game.i18n.localize('AFMBE.Weapon.FiringMode.Semi') },
-            { value: 'burst', label: game.i18n.localize('AFMBE.Weapon.FiringMode.Burst') },
-            { value: 'auto', label: game.i18n.localize('AFMBE.Weapon.FiringMode.Auto') }
-        ]
+        const gunState = !isMelee ? gunPreview(this.actor, weapon) : null
         const offensivePreview = actionState(this.actor)
         const rangePreview = isMelee ? { penalty: 0, note: "Melee range: target must be adjacent." } : measureWeaponRange(this.actor, weapon)
         const meleeState = isMelee ? meleePreview(this.actor, weapon) : null
@@ -573,9 +570,8 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             <p>${isMelee ? 'Melee: target must be adjacent.' : `Range: ${rangeSummary}`}</p>
             ${isMelee ? `<p>Swings this action: ${meleeState.swings}/${meleeState.limit}; strain so far: ${meleeState.strain}. ${meleeState.nextAction ? `Next Offensive action requires a Constitution + skill task; Endurance ${meleeState.endurance} per swing.` : 'This action has room for another swing.'}</p>` : ''}
             <p>Offensive action: ${offensivePreview ? `used ${offensivePreview.counts.offensive}; repeat penalty ${-2 * offensivePreview.counts.offensive}` : 'outside combat (no repeat penalty)'}. Rechecked when rolled.</p>
-            ${hasMagazine && !magazineMode ? `<div class="form-group"><label>Rounds fired</label><input type="number" name="shots" value="1" min="1" step="1"></div>
-            <div class="form-group"><label>Firing mode</label><select name="firingMode">${firingModes.map(mode => `<option value="${mode.value}">${escape(mode.label)}</option>`).join('')}</select></div>
-            <p>Magazine: ${Number(weapon.system.capacity.value) || 0} / ${Number(weapon.system.capacity.max)}</p>` : ''}
+            ${!isMelee ? `<p>Semi-auto: one round per attack. Shot ${gunState.shot} this turn; ${gunState.shotsInAction}/${gunState.rateOfFire} shots in current Offensive action; next recoil ${gunState.recoilPenalty}; action penalty ${gunState.actionPenalty}.</p>` : ''}
+            ${hasMagazine ? `<p>Magazine: ${Number(weapon.system.capacity.value) || 0} / ${Number(weapon.system.capacity.max) || 0}</p>` : ''}
         </form>`
         new Dialog({
             title: `Attack: ${weapon.name}`,
@@ -608,7 +604,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                         if (meters > distance * 1.5) { ui.notifications.warn('Melee target is out of reach (more than one adjacent grid space).'); return }
                     }
                     const activeMagazine = isMelee ? null : loadedMagazine(this.actor, weapon)
-                    const shots = isMelee ? 0 : magazineMode ? 1 : hasMagazine ? Number(form.elements.shots.value) : 0
+                    const shots = hasMagazine ? 1 : 0
                     const remaining = magazineMode && !isMelee ? Number(activeMagazine?.system.rounds) : Number(weapon.system.capacity?.value)
                     if (!isMelee && magazineMode && (!activeMagazine || !Number.isSafeInteger(remaining) || remaining < 1)) { ui.notifications.warn(`${weapon.name} has no loaded rounds. Reload a magazine.`); return }
                     const firedDamageType = isMelee ? (['twoHanded', 'slashing', 'stabbing'].includes(damageType(weapon.system.damage_type)) ? damageType(weapon.system.damage_type) : 'twoHanded') : magazineMode ? damageType(activeMagazine.system.ammoType) : damageType(weapon.system.damage_type)
@@ -616,11 +612,12 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                         ui.notifications.warn(`Not enough ammunition in ${weapon.name} for that attack.`)
                         return
                     }
-                    let action, meleeStrike
+                    let action, meleeStrike, gunShot
                     try {
                         meleeStrike = isMelee ? await prepareMeleeStrike(this.actor, weapon, skill) : null
                         if (isMelee && !meleeStrike) return
-                        action = isMelee ? { penalty: meleeStrike.actionPenalty } : await spendAction(this.actor, 'offensive')
+                        gunShot = isMelee ? null : await prepareGunShot(this.actor, weapon)
+                        action = { penalty: isMelee ? meleeStrike.actionPenalty : gunShot.actionPenalty }
                     } catch (error) { ui.notifications.warn(error.message); return }
                     if (!isMelee && magazineMode) {
                         await activeMagazine.update({ 'system.rounds': remaining - 1 })
@@ -628,12 +625,12 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                     } else if (hasMagazine) await weapon.update({ 'system.capacity.value': remaining - shots })
                     const roll = await new Roll('1d10').evaluate()
                     const ammoHitBonus = isMelee ? 1 : hitBonus(firedDamageType)
-                    const total = roll.total + attribute + skillLevel + location + modifier + ammoHitBonus + range.penalty + action.penalty + (meleeStrike?.strainPenalty ?? 0)
+                    const total = roll.total + attribute + skillLevel + location + modifier + ammoHitBonus + range.penalty + action.penalty + (meleeStrike?.strainPenalty ?? gunShot?.recoilPenalty ?? 0)
                     const success = total >= 9
                     const degrees = success ? Math.floor((total - 9) / 2) + 1 : 0
                     const locationName = form.elements.location.selectedOptions[0].textContent
-                    const ammoNote = hasMagazine ? `<p>${shots} round${shots === 1 ? '' : 's'} fired (${escape(magazineMode ? firedDamageType : firingModes.find(mode => mode.value === form.elements.firingMode.value)?.label ?? '')}); ${weapon.system.capacity.value}/${weapon.system.capacity.max} remaining.</p>` : ''
-                    const rangeDetail = isMelee ? `melee swing ${meleeStrike.swing}/${meleePreview(this.actor, weapon).limit}; strain ${meleeStrike.strainPenalty}; Endurance spent ${meleeStrike.enduranceSpent}` : range.note ? 'range unconfigured (0)' : `range ${range.penalty} (${range.distance.toFixed(1)} m / ${range.normalRange} m)`
+                    const ammoNote = hasMagazine ? `<p>1 ${escape(firedDamageType)} round fired (semi-auto); ${weapon.system.capacity.value}/${weapon.system.capacity.max} remaining.</p>` : ''
+                    const rangeDetail = isMelee ? `melee swing ${meleeStrike.swing}/${meleePreview(this.actor, weapon).limit}; strain ${meleeStrike.strainPenalty}; Endurance spent ${meleeStrike.enduranceSpent}` : `shot ${gunShot.shot} this turn (${gunShot.shotsInAction}/${gunShot.rateOfFire} this action), recoil ${gunShot.recoilPenalty}; ` + (range.note ? 'range unconfigured (0)' : `range ${range.penalty} (${range.distance.toFixed(1)} m / ${range.normalRange} m)` )
                     const content = `<h2>${escape(weapon.name)}</h2><div class="afmbe-roll-kind">Attack</div><p>${escape(attributeKey)} ${attribute}, ${escape(skill?.name ?? 'No skill')} ${skillLevel}, ${escape(locationName)}, modifier ${modifier}, ${isMelee ? 'melee' : 'ammo'} ${ammoHitBonus >= 0 ? "+" : ""}${ammoHitBonus}, ${rangeDetail}, action ${action.penalty}</p><p>Roll ${roll.total} + modifiers = <strong>${total}</strong> vs 9 — <strong>${success ? `Hit (${degrees} degree${degrees === 1 ? '' : 's'})` : 'Miss'}</strong></p>${ammoNote}`
                     await ChatMessage.create({ user: game.user.id, speaker: ChatMessage.getSpeaker({ actor: this.actor }),
                         content: content + `<p>${success ? `Awaiting ${escape(target.name)}’s defense.` : 'Attack misses; no damage roll.'}</p>`, rolls: [roll],
