@@ -39,9 +39,9 @@ export class afmbeItem extends Item {
         if (itemData.damage_cha_multiplier != "none" && this.isEmbedded && this.actor.type != 'vehicle') {
             
             if (typeof (itemData.damage_cha_multiplier_modifier) == "number") {
-                itemData.damage_string = `${itemData.damage}*${(actorData.primaryAttributes[itemData.damage_cha_multiplier].value + attributeBonus(this.actor, itemData.damage_cha_multiplier)) + itemData.damage_cha_multiplier_modifier + (itemData.damage_type == 1 ? 1 : 0)}`
+                itemData.damage_string = `${itemData.damage}*${(actorData.primaryAttributes[itemData.damage_cha_multiplier].value + attributeBonus(this.actor, itemData.damage_cha_multiplier)) + itemData.damage_cha_multiplier_modifier}`
             } else {
-                itemData.damage_string = `${itemData.damage}*${actorData.primaryAttributes[itemData.damage_cha_multiplier].value + attributeBonus(this.actor, itemData.damage_cha_multiplier) + (itemData.damage_type == 1 ? 1 : 0)}`
+                itemData.damage_string = `${itemData.damage}*${actorData.primaryAttributes[itemData.damage_cha_multiplier].value + attributeBonus(this.actor, itemData.damage_cha_multiplier)}`
             }
         }
         else {
