@@ -872,3 +872,11 @@
 .afmbe-armor-coverage label { display: inline-flex; align-items: center; margin-right: 0.5rem; white-space: nowrap; }
 .afmbe-armor-coverage input { width: auto; margin-right: 0.2rem; }
 .afmbe-roll-kind { font-weight: bold; margin-bottom: 0.5rem; }
+
+.afmbe-left-behind .afmbe-action-tracker { margin: 0.5rem 0; padding: 0.5rem; border: 1px solid currentColor; border-radius: 4px; }
+.afmbe-left-behind .afmbe-action-tracker p { margin: 0.2rem 0 0.5rem; }
+.afmbe-left-behind .afmbe-action-grid { display: grid; gap: 0.25rem; }
+.afmbe-left-behind .afmbe-action-row { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.afmbe-left-behind .afmbe-action-row strong { min-width: 5rem; }
+.afmbe-left-behind .afmbe-action-row span { flex: 1; }
+.afmbe-left-behind .afmbe-action-row button { flex: 0 0 auto; width: auto; padding: 0 0.35rem; }

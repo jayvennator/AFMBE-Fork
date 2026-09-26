@@ -1,3 +1,4 @@
+import { actionPanel, actionState, spendAction, correctAction } from './action-economy.js';
 import { measureWeaponRange } from './weapon-range.js';
 import { damageType, hitBonus } from './damage-types.js';
 import { activeBonuses, attributeBonus, skillBonus, useConsumable, endConsumableEffect } from './consumables.js';
@@ -108,6 +109,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         actorData.weapon = weapon
         actorData.armor = armor
         actorData.consumable = consumable
+        actorData.actionEconomy = actionPanel(this.actor)
         actorData.activeConsumables = activeBonuses(this.actor).map(effect => ({ ...effect, willCrash: effect.phase !== "crash" && Number(effect.crashPenalty) > 0 && Number(effect.crashDuration) > 0 }))
         actorData.power = power
         actorData.quality = quality
@@ -139,6 +141,18 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         html.find('.end-consumable').click(async event => {
             await endConsumableEffect(this.actor, event.currentTarget.dataset.effectId);
         })
+        html.find('.spend-action').click(async event => {
+            const type = event.currentTarget.dataset.actionType;
+            try {
+                const action = await spendAction(this.actor, type);
+                if (action.tracked) await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+                    content: `<p>${foundry.utils.escapeHTML(this.actor.name)} spends a ${foundry.utils.escapeHTML(type)} action (${action.used}; penalty ${action.penalty}).</p>` });
+            } catch (error) { ui.notifications.warn(error.message); }
+        });
+        html.find('.correct-action').click(async event => {
+            try { await correctAction(this.actor, event.currentTarget.dataset.actionType); }
+            catch (error) { ui.notifications.error(error.message); }
+        });
         html.find('.reset-resource').click(this._onResetResource.bind(this))
 
         // Update/Open Inventory Item
@@ -439,6 +453,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             { value: 'burst', label: game.i18n.localize('AFMBE.Weapon.FiringMode.Burst') },
             { value: 'auto', label: game.i18n.localize('AFMBE.Weapon.FiringMode.Auto') }
         ]
+        const offensivePreview = actionState(this.actor)
         const rangePreview = measureWeaponRange(this.actor, weapon)
         const rangeSummary = rangePreview.error || rangePreview.note ? escape(rangePreview.error || rangePreview.note) :
             `${escape(rangePreview.targetName)}: ${rangePreview.distance.toFixed(1)} m; normal range ${rangePreview.normalRange} m; penalty ${rangePreview.penalty} (${escape(rangePreview.sceneScale)})`
@@ -450,6 +465,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             </select></div>
             <div class="form-group"><label>Other modifier</label><input type="number" name="modifier" value="0" step="1"></div>
             <p>Range: ${rangeSummary}</p>
+            <p>Offensive action: ${offensivePreview ? `used ${offensivePreview.counts.offensive}; repeat penalty ${-2 * offensivePreview.counts.offensive}` : 'outside combat (no repeat penalty)'}. Rechecked when rolled.</p>
             ${hasMagazine ? `<div class="form-group"><label>Rounds fired</label><input type="number" name="shots" value="1" min="1" step="1"></div>
             <div class="form-group"><label>Firing mode</label><select name="firingMode">${firingModes.map(mode => `<option value="${mode.value}">${escape(mode.label)}</option>`).join('')}</select></div>
             <p>Magazine: ${Number(weapon.system.capacity.value) || 0} / ${Number(weapon.system.capacity.max)}</p>` : ''}
@@ -470,24 +486,24 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                     const range = measureWeaponRange(this.actor, weapon)
                     if (range.error) { ui.notifications.warn(range.error); return }
                     const shots = hasMagazine ? Number(form.elements.shots.value) : 0
-                    if (hasMagazine) {
-                        const remaining = Number(weapon.system.capacity?.value)
-                        if (!Number.isInteger(shots) || shots < 1 || !Number.isFinite(remaining) || shots > remaining) {
-                            ui.notifications.warn(`Not enough ammunition in ${weapon.name} for that attack.`)
-                            return
-                        }
-                        // Firing spends ammunition whether the attack hits or misses.
-                        await weapon.update({ 'system.capacity.value': remaining - shots })
+                    const remaining = Number(weapon.system.capacity?.value)
+                    if (hasMagazine && (!Number.isInteger(shots) || shots < 1 || !Number.isFinite(remaining) || shots > remaining)) {
+                        ui.notifications.warn(`Not enough ammunition in ${weapon.name} for that attack.`)
+                        return
                     }
+                    let action
+                    try { action = await spendAction(this.actor, 'offensive') }
+                    catch (error) { ui.notifications.warn(error.message); return }
+                    if (hasMagazine) await weapon.update({ 'system.capacity.value': remaining - shots })
                     const roll = await new Roll('1d10').evaluate()
                     const ammoHitBonus = hitBonus(weapon.system.damage_type)
-                    const total = roll.total + attribute + skillLevel + location + modifier + ammoHitBonus + range.penalty
+                    const total = roll.total + attribute + skillLevel + location + modifier + ammoHitBonus + range.penalty + action.penalty
                     const success = total >= 9
                     const degrees = success ? Math.floor((total - 9) / 2) + 1 : 0
                     const locationName = form.elements.location.selectedOptions[0].textContent
                     const ammoNote = hasMagazine ? `<p>${shots} round${shots === 1 ? '' : 's'} fired (${escape(firingModes.find(mode => mode.value === form.elements.firingMode.value)?.label ?? '')}); ${weapon.system.capacity.value}/${weapon.system.capacity.max} remaining.</p>` : ''
                     const rangeDetail = range.note ? 'range unconfigured (0)' : `range ${range.penalty} (${range.distance.toFixed(1)} m / ${range.normalRange} m)`
-                    const content = `<h2>${escape(weapon.name)}</h2><div class="afmbe-roll-kind">Attack</div><p>${escape(attributeKey)} ${attribute}, ${escape(skill?.name ?? 'No skill')} ${skillLevel}, ${escape(locationName)}, modifier ${modifier}, ammo ${ammoHitBonus >= 0 ? "+" : ""}${ammoHitBonus}, ${rangeDetail}</p><p>Roll ${roll.total} + modifiers = <strong>${total}</strong> vs 9 — <strong>${success ? `Hit (${degrees} degree${degrees === 1 ? '' : 's'})` : 'Miss'}</strong></p>${ammoNote}`
+                    const content = `<h2>${escape(weapon.name)}</h2><div class="afmbe-roll-kind">Attack</div><p>${escape(attributeKey)} ${attribute}, ${escape(skill?.name ?? 'No skill')} ${skillLevel}, ${escape(locationName)}, modifier ${modifier}, ammo ${ammoHitBonus >= 0 ? "+" : ""}${ammoHitBonus}, ${rangeDetail}, action ${action.penalty}</p><p>Roll ${roll.total} + modifiers = <strong>${total}</strong> vs 9 — <strong>${success ? `Hit (${degrees} degree${degrees === 1 ? '' : 's'})` : 'Miss'}</strong></p>${ammoNote}`
                     await ChatMessage.create({ user: game.user.id, speaker: ChatMessage.getSpeaker({ actor: this.actor }), content, rolls: [roll] })
                 } }
             },

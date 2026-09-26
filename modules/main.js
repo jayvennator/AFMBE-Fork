@@ -197,3 +197,11 @@ Hooks.on("renderChatMessage", (app, html, data) => {
 })
 
 Hooks.on('updateCombat', advanceConsumables);
+
+// Refresh open actor sheets when the active turn changes so action counts visibly reset.
+Hooks.on('updateCombat', (combat, changes) => {
+    if (!Object.hasOwn(changes, 'turn') && !Object.hasOwn(changes, 'round')) return;
+    for (const actor of new Set(combat.combatants.map(combatant => combatant.actor).filter(Boolean))) {
+        if (actor.sheet?.rendered) actor.sheet.render(false);
+    }
+});

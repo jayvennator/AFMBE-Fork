@@ -1,0 +1,14 @@
+{{#if actor.actionEconomy}}
+<div class="afmbe-action-tracker">
+    <h2>Combat actions</h2>
+    <p>One free action of each type per turn. Each repeat is −2. Attack spends Offensive automatically.</p>
+    <div class="afmbe-action-grid">
+    {{#each actor.actionEconomy.rows as |row|}}
+        <div class="afmbe-action-row"><strong>{{row.label}}</strong> <span>Used: {{row.used}} · Next: {{row.penalty}}</span>
+            <button type="button" class="spend-action" data-action-type="{{row.type}}">Spend</button>
+            {{#if ../isGM}}<button type="button" class="correct-action" data-action-type="{{row.type}}" title="Undo one action">−</button>{{/if}}
+        </div>
+    {{/each}}
+    </div>
+</div>
+{{/if}}
