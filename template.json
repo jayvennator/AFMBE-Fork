@@ -260,7 +260,8 @@
                 "capacity": {
                     "value": 0,
                     "max": 0
-                }
+                },
+                "rangePenaltyStep": 2
             },
             "common": {
                 "encumbrance": 0,

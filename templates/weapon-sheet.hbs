@@ -10,8 +10,9 @@
                     <tbody>
                         <tr>
                             <th>{{localize 'AFMBE.Common.Range'}}</th>
-                            <td><input type="text" name="system.range" value="{{item.system.range}}"></td>
+                            <td><input type="number" min="0" step="any" name="system.range" value="{{item.system.range}}" placeholder="Normal range in meters"></td>
                         </tr>
+                        <tr><th>Penalty per extra range band</th><td><input type="number" min="0" max="20" step="1" name="system.rangePenaltyStep" value="{{item.system.rangePenaltyStep}}"></td></tr>
                         <tr>
                             <th>{{localize 'AFMBE.Common.Damage'}}</th>
                             <td><input type="text" name="system.damage" value="{{item.system.damage}}"></td>

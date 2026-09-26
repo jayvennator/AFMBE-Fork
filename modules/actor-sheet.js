@@ -1,3 +1,4 @@
+import { measureWeaponRange } from './weapon-range.js';
 import { damageType, hitBonus } from './damage-types.js';
 import { activeBonuses, attributeBonus, skillBonus, useConsumable, endConsumableEffect } from './consumables.js';
 import { postArmorRoll } from './armor-damage.js';
@@ -438,6 +439,9 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             { value: 'burst', label: game.i18n.localize('AFMBE.Weapon.FiringMode.Burst') },
             { value: 'auto', label: game.i18n.localize('AFMBE.Weapon.FiringMode.Auto') }
         ]
+        const rangePreview = measureWeaponRange(this.actor, weapon)
+        const rangeSummary = rangePreview.error || rangePreview.note ? escape(rangePreview.error || rangePreview.note) :
+            `${escape(rangePreview.targetName)}: ${rangePreview.distance.toFixed(1)} m; normal range ${rangePreview.normalRange} m; penalty ${rangePreview.penalty} (${escape(rangePreview.sceneScale)})`
         const content = `<form class="afmbe-attack-dialog">
             <div class="form-group"><label>Attribute</label><select name="attribute">${options}</select></div>
             <div class="form-group"><label>Skill</label><select name="skill"><option value="">None</option>${skillOptions}</select></div>
@@ -445,6 +449,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                 <option value="0">Body (0)</option><option value="-2">Arm or leg (-2)</option><option value="-4">Head (-4)</option>
             </select></div>
             <div class="form-group"><label>Other modifier</label><input type="number" name="modifier" value="0" step="1"></div>
+            <p>Range: ${rangeSummary}</p>
             ${hasMagazine ? `<div class="form-group"><label>Rounds fired</label><input type="number" name="shots" value="1" min="1" step="1"></div>
             <div class="form-group"><label>Firing mode</label><select name="firingMode">${firingModes.map(mode => `<option value="${mode.value}">${escape(mode.label)}</option>`).join('')}</select></div>
             <p>Magazine: ${Number(weapon.system.capacity.value) || 0} / ${Number(weapon.system.capacity.max)}</p>` : ''}
@@ -462,6 +467,8 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                     const skillLevel = (Number(skill?.system.level) || 0) + skillBonus(this.actor, skill)
                     const location = Number(form.elements.location.value) || 0
                     const modifier = Number(form.elements.modifier.value) || 0
+                    const range = measureWeaponRange(this.actor, weapon)
+                    if (range.error) { ui.notifications.warn(range.error); return }
                     const shots = hasMagazine ? Number(form.elements.shots.value) : 0
                     if (hasMagazine) {
                         const remaining = Number(weapon.system.capacity?.value)
@@ -474,12 +481,13 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                     }
                     const roll = await new Roll('1d10').evaluate()
                     const ammoHitBonus = hitBonus(weapon.system.damage_type)
-                    const total = roll.total + attribute + skillLevel + location + modifier + ammoHitBonus
+                    const total = roll.total + attribute + skillLevel + location + modifier + ammoHitBonus + range.penalty
                     const success = total >= 9
                     const degrees = success ? Math.floor((total - 9) / 2) + 1 : 0
                     const locationName = form.elements.location.selectedOptions[0].textContent
                     const ammoNote = hasMagazine ? `<p>${shots} round${shots === 1 ? '' : 's'} fired (${escape(firingModes.find(mode => mode.value === form.elements.firingMode.value)?.label ?? '')}); ${weapon.system.capacity.value}/${weapon.system.capacity.max} remaining.</p>` : ''
-                    const content = `<h2>${escape(weapon.name)}</h2><div class="afmbe-roll-kind">Attack</div><p>${escape(attributeKey)} ${attribute}, ${escape(skill?.name ?? 'No skill')} ${skillLevel}, ${escape(locationName)}, modifier ${modifier}, ammo ${ammoHitBonus >= 0 ? "+" : ""}${ammoHitBonus}</p><p>Roll ${roll.total} + modifiers = <strong>${total}</strong> vs 9 — <strong>${success ? `Hit (${degrees} degree${degrees === 1 ? '' : 's'})` : 'Miss'}</strong></p>${ammoNote}`
+                    const rangeDetail = range.note ? 'range unconfigured (0)' : `range ${range.penalty} (${range.distance.toFixed(1)} m / ${range.normalRange} m)`
+                    const content = `<h2>${escape(weapon.name)}</h2><div class="afmbe-roll-kind">Attack</div><p>${escape(attributeKey)} ${attribute}, ${escape(skill?.name ?? 'No skill')} ${skillLevel}, ${escape(locationName)}, modifier ${modifier}, ammo ${ammoHitBonus >= 0 ? "+" : ""}${ammoHitBonus}, ${rangeDetail}</p><p>Roll ${roll.total} + modifiers = <strong>${total}</strong> vs 9 — <strong>${success ? `Hit (${degrees} degree${degrees === 1 ? '' : 's'})` : 'Miss'}</strong></p>${ammoNote}`
                     await ChatMessage.create({ user: game.user.id, speaker: ChatMessage.getSpeaker({ actor: this.actor }), content, rolls: [roll] })
                 } }
             },
