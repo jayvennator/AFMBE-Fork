@@ -45,7 +45,7 @@
                         </tr>
                         <tr>
                             <th>Compatible caliber</th>
-                            <td><input type="text" name="system.ammo_type" value="{{item.system.ammo_type}}"></td>
+                            <td><select class="caliber-presets"><option value="">Custom / current value</option>{{#selectOptions caliberOptions selected=selectedCaliber}}{{/selectOptions}}</select><input class="caliber-value" type="text" name="system.ammo_type" value="{{item.system.ammo_type}}" placeholder="Choose a caliber or enter a custom one"></td>
                         </tr>
                         <tr><th>Magazine inventory</th><td>Use Reload on the character sheet to switch to magazines. Existing capacity remains active until the first reload. Set matching caliber on the weapon, magazine, and loose ammo.</td></tr>
                         <tr>

@@ -1,7 +1,8 @@
 import { damageType } from './damage-types.js';
 import { spendAction } from './action-economy.js';
+import { normalizeCaliber } from './calibers.js';
 
-const caliber = value => String(value ?? '').trim().toLowerCase().replace(/\s+/g, '');
+const caliber = normalizeCaliber;
 const count = value => Number(value);
 const validCount = value => Number.isSafeInteger(count(value)) && count(value) >= 0;
 const alert = message => { ui.notifications.warn(message); return false; };
