@@ -264,6 +264,10 @@
                     "max": 0
                 },
                 "rangePenaltyStep": 2,
+                "attackMode": "auto",
+                "meleeAttribute": "",
+                "swingsPerAction": 1,
+                "strain": 0,
                 "loadedMagazineId": "",
                 "usesMagazines": false
             },

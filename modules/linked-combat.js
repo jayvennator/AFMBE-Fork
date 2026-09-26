@@ -6,6 +6,8 @@ const resolving = new Set();
 const rolling = new Set();
 const meleeTypes = new Set(['twoHanded', 'slashing', 'stabbing']);
 export function isMeleeAttack(weapon) {
+    if (weapon.system.attackMode === 'melee') return true;
+    if (weapon.system.attackMode === 'ranged') return false;
     const type = damageType(weapon.system.damage_type);
     return meleeTypes.has(type) || (!Number(weapon.system.range) && !Number(weapon.system.capacity?.max));
 }

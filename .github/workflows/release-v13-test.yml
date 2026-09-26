@@ -17,18 +17,18 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Foundry package
         run: |
-          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.18.zip" . -x '.git/*' '.github/*'
+          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.19.zip" . -x '.git/*' '.github/*'
           cp system.json "$RUNNER_TEMP/system.json"
-          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.18.zip" system.json | python3 -m json.tool >/dev/null
-          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.18.zip"
+          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.19.zip" system.json | python3 -m json.tool >/dev/null
+          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.19.zip"
       - name: Publish prerelease
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.2.1-test.18 \
-            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.18.zip" \
+          gh release create v1.2.1-test.19 \
+            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.19.zip" \
             "$RUNNER_TEMP/system.json" \
             --target "$GITHUB_SHA" \
-            --title "AFMBE: Left Behind V13 caliber catalog test 18" \
-            --notes "Foundry V13 build 351 test. Adds shared caliber selectors with legacy aliases for weapons, magazines, and loose ammunition. The converted catalog bundle is distributed separately." \
+            --title "AFMBE: Left Behind V13 melee test 19" \
+            --notes "Foundry V13 build 351 test. Adds explicit melee mode and attribute, swing limits, cumulative Strain, Constitution task for extra Offensive actions, and Constitution-based Endurance cost per extra swing." \
             --prerelease

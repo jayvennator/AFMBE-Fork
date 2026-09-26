@@ -28,6 +28,8 @@ export class afmbeItemSheet extends foundry.appv1.sheets.ItemSheet {
         data.hasActor = this.item.parent instanceof Actor;
         data.normalizedDamageType = damageType(this.item.system.damage_type);
         data.caliberOptions = CALIBERS;
+        data.attackModeOptions = { auto: 'Auto (legacy)', melee: 'Melee', ranged: 'Ranged' };
+        data.meleeAttributeOptions = { '': 'Auto (legacy)', strength: 'Strength', dexterity: 'Dexterity' };
         data.selectedCaliber = caliberSelection(this.item.type === "weapon" ? this.item.system.ammo_type : this.item.system.caliber);
         data.ammoDamageTypes = {"bullets": "Normal Bullet", "hollowPoint": "Hollow Point", "armorPiercing": "Armor Piercing", "slug": "Slug", "buckshot": "Buckshot", "birdshot": "Birdshot", "shotgun": "Shotgun", "explosive": "Explosive", "poison": "Poison", "corrosive": "Corrosive"};
         data.skillOptions = Object.fromEntries((this.item.parent?.items ?? []).filter(item => item.type === "skill").map(item => [item.name, item.name]));

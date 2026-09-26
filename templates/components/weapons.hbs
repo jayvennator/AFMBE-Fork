@@ -19,7 +19,7 @@
                 <td>
                     <div class="item-name-flex-container">
                         <button type="button" class="attack-roll" title="Roll attack">Attack</button>
-                        {{#if item.system.capacity.max}}<button type="button" class="reload-weapon" title="Swap a compatible magazine; spends a Help action in combat">Reload</button>{{/if}}
+                        {{#unless item.isMeleeWeapon}}{{#if item.system.capacity.max}}<button type="button" class="reload-weapon" title="Swap a compatible magazine; spends a Help action in combat">Reload</button>{{/if}}{{/unless}}
                         {{#if @root.isGM}}<button type="button" class="damage-roll" title="GM manual damage">Manual Damage</button>{{/if}}
                         <div class="item-name">{{item.name}}</div>
                     </div>
@@ -27,9 +27,8 @@
                 <td class="table-center-align">{{item.system.damage_string}}</td>
                 <td>
                     <div class="table-flex-cell">
-                        <div>{{item.system.capacity.value}}</div>
-                        /
-                        <div>{{item.system.capacity.max}}</div>
+                        <div>{{#if item.isMeleeWeapon}}—{{else}}{{item.system.capacity.value}}{{/if}}</div>
+                        {{#unless item.isMeleeWeapon}}/<div>{{item.system.capacity.max}}</div>{{/unless}}
                     </div>
                 </td>
                 <td class="table-center-align">{{item.system.encumbrance}}</td>

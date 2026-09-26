@@ -43,6 +43,10 @@
                                 </select>
                             </td>
                         </tr>
+                        <tr><th>Attack type</th><td><select name="system.attackMode">{{#selectOptions attackModeOptions selected=item.system.attackMode}}{{/selectOptions}}</select><small>Auto detects older melee weapons from their damage type.</small></td></tr>
+                        <tr><th>Melee attack attribute</th><td><select name="system.meleeAttribute">{{#selectOptions meleeAttributeOptions selected=item.system.meleeAttribute}}{{/selectOptions}}</select><small>Auto uses Dexterity for legacy Dexterity weapons, Strength otherwise.</small></td></tr>
+                        <tr><th>Swings per Offensive action</th><td><input type="number" name="system.swingsPerAction" min="1" max="20" step="1" value="{{item.system.swingsPerAction}}"></td></tr>
+                        <tr><th>Strain per swing</th><td><input type="number" name="system.strain" min="0" max="20" step="1" value="{{item.system.strain}}"></td></tr>
                         <tr>
                             <th>Compatible caliber</th>
                             <td><select class="caliber-presets"><option value="">Custom / current value</option>{{#selectOptions caliberOptions selected=selectedCaliber}}{{/selectOptions}}</select><input class="caliber-value" type="text" name="system.ammo_type" value="{{item.system.ammo_type}}" placeholder="Choose a caliber or enter a custom one"></td>
