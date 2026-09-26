@@ -29,6 +29,29 @@ export class afmbeItemSheet extends foundry.appv1.sheets.ItemSheet {
         return data;
     }
 
+    /** @override */
+    activateListeners(html) {
+        super.activateListeners(html);
+        html.find('.convert-to-armor').click(async event => {
+            event.preventDefault();
+            const actor = this.item.parent;
+            if (!actor?.isOwner || this.item.type !== 'item') return;
+            const converted = this.item.toObject();
+            delete converted._id;
+            converted.type = 'armor';
+            try {
+                // Create the replacement before removing the original item.
+                const [armor] = await actor.createEmbeddedDocuments('Item', [converted]);
+                await actor.deleteEmbeddedDocuments('Item', [this.item.id]);
+                await this.close();
+                armor.sheet.render(true);
+            } catch (error) {
+                console.error('AFMBE armor conversion failed', error);
+                ui.notifications.error('Could not convert the item. Check the actor inventory before retrying.');
+            }
+        });
+    }
+
     /* -------------------------------------------- */
 
     /** @override */

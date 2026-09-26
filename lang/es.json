@@ -98,6 +98,8 @@
     "AFMBE.Item.Attributes.SpeedBonus": "Velocidad+",
     "AFMBE.Item.Attributes.TestBonus": "Bonificación de prueba",
     "AFMBE.Item.Attributes.Title": "Atributos",
+    "AFMBE.Armor.Title": "Armadura",
+    "AFMBE.ItemType.armor": "Armadura",
     "AFMBE.ItemType.aspect": "Aspecto",
     "AFMBE.ItemType.drawback": "Desventaja",
     "AFMBE.ItemType.item": "Objeto",

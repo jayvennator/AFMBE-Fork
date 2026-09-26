@@ -198,6 +198,7 @@
             "skill",
             "power",
             "weapon",
+            "armor",
             "item",
             "aspect"
         ],
@@ -297,6 +298,20 @@
                 "common",
                 "weapon"
             ]
+        },
+        "armor": {
+            "templates": [
+                "common"
+            ],
+            "equipped": false,
+            "armor_value": "0",
+            "armor_coverage": {
+                "body": true,
+                "head": false,
+                "arms": false,
+                "legs": false
+            },
+            "qty": 1
         },
         "item": {
             "templates": [

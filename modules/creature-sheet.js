@@ -38,6 +38,7 @@ export class afmbeCreatureSheet extends foundry.appv1.sheets.ActorSheet {
         // Initialize Containers
         const item = [];
         const equippedItem = [];
+        const armor = [];
         const weapon = [];
         const skill = [];
         const aspect = [];
@@ -54,6 +55,10 @@ export class afmbeCreatureSheet extends foundry.appv1.sheets.ActorSheet {
                     weapon.push(i)
                     break
 
+                case "armor":
+                    armor.push(i)
+                    break
+
                 case "skill":
                     skill.push(i)
                     break
@@ -65,7 +70,7 @@ export class afmbeCreatureSheet extends foundry.appv1.sheets.ActorSheet {
         }
 
         // Alphabetically sort all items
-        const itemCats = [item, equippedItem, weapon, skill, aspect]
+        const itemCats = [item, equippedItem, weapon, armor, skill, aspect]
         for (let category of itemCats) {
             if (category.length > 1) {
                 category.sort((a, b) => {
@@ -81,6 +86,7 @@ export class afmbeCreatureSheet extends foundry.appv1.sheets.ActorSheet {
         actorData.item = item
         actorData.equippedItem = equippedItem
         actorData.weapon = weapon
+        actorData.armor = armor
         actorData.skill = skill
         actorData.aspect = aspect
     }

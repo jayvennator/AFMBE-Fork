@@ -40,6 +40,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         // Initialize Containers
         const item = [];
         const equippedItem = [];
+        const armor = [];
         const weapon = [];
         const power = [];
         const quality = [];
@@ -56,6 +57,10 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
 
                 case "weapon":
                     weapon.push(i)
+                    break
+
+                case "armor":
+                    armor.push(i)
                     break
 
                 case "power":
@@ -77,7 +82,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         }
 
         // Alphabetically sort all items
-        const itemCats = [item, equippedItem, weapon, power, quality, skill, drawback]
+        const itemCats = [item, equippedItem, weapon, armor, power, quality, skill, drawback]
         for (let category of itemCats) {
             if (category.length > 1) {
                 category.sort((a, b) => {
@@ -93,6 +98,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         actorData.item = item
         actorData.equippedItem = equippedItem
         actorData.weapon = weapon
+        actorData.armor = armor
         actorData.power = power
         actorData.quality = quality
         actorData.skill = skill

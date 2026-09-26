@@ -14,6 +14,7 @@ export function registerTemplates() {
         "systems/afmbe-jesuisfrog/templates/components/powers.hbs",
         "systems/afmbe-jesuisfrog/templates/components/skills.hbs",
         "systems/afmbe-jesuisfrog/templates/components/weapons.hbs",
+        "systems/afmbe-jesuisfrog/templates/components/armor.hbs",
         "systems/afmbe-jesuisfrog/templates/components/qualities.hbs",
         "systems/afmbe-jesuisfrog/templates/components/item-attribute-sidebar.hbs",
         "systems/afmbe-jesuisfrog/templates/components/item-sheet-header.hbs",

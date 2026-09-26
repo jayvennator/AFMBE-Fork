@@ -2,6 +2,7 @@
 
     {{!-- Sheet Header --}}
     {{> "systems/afmbe-jesuisfrog/templates/components/item-sheet-header.hbs"}}
+    <h2>{{localize 'AFMBE.Armor.Title'}}</h2>
 
     <section>
         <div class="description-container">
@@ -34,9 +35,6 @@
                                 <label><input type="checkbox" name="system.armor_coverage.legs" {{checked item.system.armor_coverage.legs}}>Legs</label>
                             </td>
                         </tr>
-                        {{#if item.isEmbedded}}
-                        <tr><th>Item type</th><td><button type="button" class="convert-to-armor">Convert to Armor</button></td></tr>
-                        {{/if}}
                         <tr>
                             <th>{{localize 'AFMBE.Common.EV'}}</th>
                             <td><input type="number" name="system.encumbrance" value="{{item.system.encumbrance}}"></td>

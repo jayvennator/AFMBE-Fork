@@ -41,7 +41,8 @@ export async function applyArmorDamage(message) {
         let coveringItems = 0;
 
         for (const item of actor.items) {
-            if (item.type !== 'item' || !item.system.equipped) continue;
+            // Generic items remain valid armor until their owners convert them.
+            if (!['item', 'armor'].includes(item.type) || !item.system.equipped) continue;
             // Existing armor items created before coverage was added protect the body.
             const coverage = item.system.armor_coverage ?? { body: true };
             if (!coverage[location]) continue;

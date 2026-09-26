@@ -39,6 +39,7 @@ export class afmbevehicleSheet extends foundry.appv1.sheets.ActorSheet {
         // Initialize Containers
         const item = [];
         const equippedItem = [];
+        const armor = [];
         const weapon = [];
 
         // Iterate through items and assign to containers
@@ -52,11 +53,15 @@ export class afmbevehicleSheet extends foundry.appv1.sheets.ActorSheet {
                 case "weapon":
                     weapon.push(i)
                     break
+
+                case "armor":
+                    armor.push(i)
+                    break
             }
         }
 
         // Alphabetically sort all items
-        const itemCats = [item, equippedItem, weapon]
+        const itemCats = [item, equippedItem, weapon, armor]
         for (let category of itemCats) {
             if (category.length > 1) {
                 category.sort((a, b) => {
@@ -72,6 +77,7 @@ export class afmbevehicleSheet extends foundry.appv1.sheets.ActorSheet {
         actorData.item = item
         actorData.equippedItem = equippedItem
         actorData.weapon = weapon
+        actorData.armor = armor
     }
 
     get template() {
