@@ -2,7 +2,7 @@
   "id": "afmbe-left-behind",
   "title": "AFMBE: Left Behind",
   "description": "A digital system for playing AFMBE (All Flesh Must Be Eaten) by Eden Studios",
-  "version": "1.2.1-test.16",
+  "version": "1.2.1-test.17",
   "esmodules": [
     "modules/main.js"
   ],
@@ -37,5 +37,5 @@
     "maximum": "13"
   },
   "manifest": "https://raw.githubusercontent.com/jayvennator/AFMBE-Fork/codex/v13-attack-dialog-test/system.json",
-  "download": "https://github.com/jayvennator/AFMBE-Fork/releases/download/v1.2.1-test.16/afmbe-left-behind-v1.2.1-test.16.zip"
+  "download": "https://github.com/jayvennator/AFMBE-Fork/releases/download/v1.2.1-test.17/afmbe-left-behind-v1.2.1-test.17.zip"
 }

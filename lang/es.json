@@ -156,5 +156,7 @@
     "AFMBE.Weapon.FiringMode.Semi": "Semiautomático",
     "AFMBE.Weapon.Shot.Multiple": "{count} disparos",
     "AFMBE.Weapon.Shot.Single": "{count} disparo",
-    "AFMBE.Weapons.Title": "Armas"
+    "AFMBE.Weapons.Title": "Armas",
+    "AFMBE.ItemType.magazine": "Cargador",
+    "AFMBE.ItemType.ammunition": "Munición"
 }

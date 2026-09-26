@@ -205,7 +205,9 @@
             "armor",
             "consumable",
             "item",
-            "aspect"
+            "aspect",
+            "magazine",
+            "ammunition"
         ],
         "templates": {
             "weapon": {
@@ -261,7 +263,9 @@
                     "value": 0,
                     "max": 0
                 },
-                "rangePenaltyStep": 2
+                "rangePenaltyStep": 2,
+                "loadedMagazineId": "",
+                "usesMagazines": false
             },
             "common": {
                 "encumbrance": 0,
@@ -358,6 +362,24 @@
             "skillName": "",
             "crashPenalty": 0,
             "crashDuration": 0
+        },
+        "magazine": {
+            "templates": [
+                "common"
+            ],
+            "caliber": "",
+            "capacity": 0,
+            "rounds": 0,
+            "ammoType": "bullets",
+            "insertedInWeaponId": ""
+        },
+        "ammunition": {
+            "templates": [
+                "common"
+            ],
+            "caliber": "",
+            "qty": 0,
+            "ammoType": "bullets"
         }
     }
 }

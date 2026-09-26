@@ -1,0 +1,8 @@
+<form class="{{cssClass}}" autocomplete="off">
+{{> "systems/afmbe-left-behind/templates/components/item-sheet-header.hbs"}}
+<section class="description-container"><div class="item-attribute-sidebar"><h2>Ammunition</h2><table><tbody>
+<tr><th>Caliber</th><td><input name="system.caliber" type="text" value="{{item.system.caliber}}" placeholder="e.g. 9 mm"></td></tr>
+<tr><th>Ammunition type</th><td><select name="system.ammoType">{{#selectOptions ammoDamageTypes selected=item.system.ammoType}}{{/selectOptions}}</select></td></tr>
+<tr><th>Loose rounds</th><td><input name="system.qty" type="number" min="0" step="1" value="{{item.system.qty}}"></td></tr>
+<tr><th>Encumbrance</th><td><input name="system.encumbrance" type="number" min="0" step="any" value="{{item.system.encumbrance}}"></td></tr>
+</tbody></table></div>{{> "systems/afmbe-left-behind/templates/components/item-description-sidebar.hbs"}}</section></form>

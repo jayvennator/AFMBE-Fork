@@ -156,5 +156,7 @@
     "AFMBE.Weapon.FiringMode.Semi": "Semi-Auto",
     "AFMBE.Weapon.Shot.Multiple": "{count} shots",
     "AFMBE.Weapon.Shot.Single": "{count} shot",
-    "AFMBE.Weapons.Title": "Weapons"
+    "AFMBE.Weapons.Title": "Weapons",
+    "AFMBE.ItemType.magazine": "Magazine",
+    "AFMBE.ItemType.ammunition": "Ammunition"
 }

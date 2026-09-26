@@ -1,0 +1,10 @@
+<form class="{{cssClass}}" autocomplete="off">
+{{> "systems/afmbe-left-behind/templates/components/item-sheet-header.hbs"}}
+<section class="description-container"><div class="item-attribute-sidebar"><h2>Magazine</h2><table><tbody>
+<tr><th>Caliber</th><td><input name="system.caliber" type="text" value="{{item.system.caliber}}" placeholder="e.g. 9 mm"></td></tr>
+<tr><th>Ammunition type</th><td><select name="system.ammoType">{{#selectOptions ammoDamageTypes selected=item.system.ammoType}}{{/selectOptions}}</select></td></tr>
+<tr><th>Capacity</th><td><input name="system.capacity" type="number" min="1" step="1" value="{{item.system.capacity}}"></td></tr>
+<tr><th>Rounds loaded</th><td><input name="system.rounds" type="number" min="0" step="1" value="{{item.system.rounds}}"></td></tr>
+<p>Set initial rounds for premade magazines, or load from loose ammunition on an actor sheet. Once inserted, use actor sheet controls to change rounds.</p>
+<tr><th>Encumbrance</th><td><input name="system.encumbrance" type="number" min="0" step="any" value="{{item.system.encumbrance}}"></td></tr>
+</tbody></table></div>{{> "systems/afmbe-left-behind/templates/components/item-description-sidebar.hbs"}}</section></form>

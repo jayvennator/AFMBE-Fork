@@ -120,7 +120,7 @@ export async function rollLinkedDamage(message) {
         await ChatMessage.create({ user: game.user.id, speaker: ChatMessage.getSpeaker({ actor: attacker }), rolls: [roll],
             content: `<h2>Damage Roll</h2><div class="afmbe-roll-kind">${foundry.utils.escapeHTML(weapon.name)}</div><p>${foundry.utils.escapeHTML(weapon.system.damage_string)} = <strong>${roll.total}</strong>${attack.blocked ? ' (blocked: damage after armor is halved)' : ''}</p>`,
             flags: { [SYSTEM_ID]: { armorDamage: { targetUuid: attack.targetUuid, targetName: attack.targetName,
-                damage: roll.total, damageType: damageType(weapon.system.damage_type), location: attack.location,
+                damage: roll.total, damageType: damageType(attack.damageType ?? weapon.system.damage_type), location: attack.location,
                 blocked: Boolean(attack.blocked), applied: false, attackUuid: message.uuid } } } });
         await message.update({ [`flags.${SYSTEM_ID}.pendingAttack.status`]: 'complete' });
     } catch (error) {

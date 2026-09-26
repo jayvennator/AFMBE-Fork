@@ -4,6 +4,7 @@ import { measureWeaponRange } from './weapon-range.js';
 import { damageType, hitBonus } from './damage-types.js';
 import { activeBonuses, attributeBonus, skillBonus, useConsumable, endConsumableEffect } from './consumables.js';
 import { postArmorRoll } from './armor-damage.js';
+import { loadedMagazine, compatibleMagazines, reloadWeapon, loadMagazine } from './magazines.js';
 
 export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
 
@@ -48,6 +49,8 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         const armor = [];
         const consumable = [];
         const weapon = [];
+        const magazine = [];
+        const ammunition = [];
         const power = [];
         const quality = [];
         const skill = [];
@@ -63,6 +66,14 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
 
                 case "weapon":
                     weapon.push(i)
+                    break
+
+                case "magazine":
+                    magazine.push(i)
+                    break
+
+                case "ammunition":
+                    ammunition.push(i)
                     break
 
                 case "consumable":
@@ -92,7 +103,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         }
 
         // Alphabetically sort all items
-        const itemCats = [item, equippedItem, weapon, armor, consumable, power, quality, skill, drawback]
+        const itemCats = [item, equippedItem, weapon, armor, consumable, magazine, ammunition, power, quality, skill, drawback]
         for (let category of itemCats) {
             if (category.length > 1) {
                 category.sort((a, b) => {
@@ -108,6 +119,8 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         actorData.item = item
         actorData.equippedItem = equippedItem
         actorData.weapon = weapon
+        actorData.magazine = magazine
+        actorData.ammunition = ammunition
         actorData.armor = armor
         actorData.consumable = consumable
         actorData.actionEconomy = actionPanel(this.actor)
@@ -135,6 +148,8 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         // Buttons and Event Listeners
         html.find('.attribute-roll').click(this._onAttributeRoll.bind(this))
         html.find('.attack-roll').click(this._onAttackRoll.bind(this))
+        html.find('.reload-weapon').click(this._onReloadWeapon.bind(this))
+        html.find('.load-magazine').click(this._onLoadMagazine.bind(this))
         if (game.user.isGM) html.find('.damage-roll').click(this._onDamageRoll.bind(this))
         html.find('.toggleEquipped').click(this._onToggleEquipped.bind(this))
         html.find('.armor-button-cell button').click(this._onArmorRoll.bind(this))
@@ -490,6 +505,35 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         }, default: 'roll' }, { classes: ['dialog', 'afmbe-left-behind', game.settings.get('afmbe-left-behind', 'dark-mode') ? 'dark-mode' : ''] }).render(true);
     }
 
+    async _onReloadWeapon(event) {
+        event.preventDefault();
+        const weapon = this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId);
+        if (!weapon || !this.actor.isOwner) return;
+        const spare = compatibleMagazines(this.actor, weapon);
+        if (!spare.length) { ui.notifications.warn('No compatible spare magazines. Set matching caliber on the weapon and magazine.'); return; }
+        const esc = foundry.utils.escapeHTML;
+        new Dialog({ title: `Reload: ${weapon.name}`, content: `<form><label>Spare magazine</label><select name="magazine">${spare.map(item => `<option value="${esc(item.id)}">${esc(item.name)} — ${item.system.rounds}/${item.system.capacity} (${esc(damageType(item.system.ammoType))})</option>`).join('')}</select></form>`,
+            buttons: { cancel: { label: 'Cancel' }, reload: { label: 'Reload (Help action)', callback: async html => {
+                try { await reloadWeapon(this.actor, weapon, this.actor.items.get(html[0].querySelector('[name="magazine"]').value)); }
+                catch (error) { console.error('AFMBE reload failed', error); ui.notifications.error(`Reload failed: ${error.message}`); }
+            } } }, default: 'reload' }).render(true);
+    }
+
+    async _onLoadMagazine(event) {
+        event.preventDefault();
+        const magazine = this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId);
+        if (!magazine || !this.actor.isOwner) return;
+        const esc = foundry.utils.escapeHTML;
+        const ammo = this.actor.items.filter(item => item.type === 'ammunition' && Number(item.system.qty) > 0);
+        if (!ammo.length) { ui.notifications.warn('Create loose ammunition first.'); return; }
+        new Dialog({ title: `Load: ${magazine.name}`, content: `<form><label>Loose ammunition</label><select name="ammo">${ammo.map(item => `<option value="${esc(item.id)}">${esc(item.name)} — ${item.system.qty} (${esc(item.system.caliber)}, ${esc(item.system.ammoType)})</option>`).join('')}</select><label>Rounds to load</label><input type="number" name="amount" min="1" step="1" value="1"></form>`,
+            buttons: { cancel: { label: 'Cancel' }, load: { label: 'Load rounds', callback: async html => {
+                const form = html[0].querySelector('form');
+                try { await loadMagazine(this.actor, magazine, this.actor.items.get(form.elements.ammo.value), Number(form.elements.amount.value)); }
+                catch (error) { console.error('AFMBE magazine loading failed', error); ui.notifications.error(`Loading failed: ${error.message}`); }
+            } } }, default: 'load' }).render(true);
+    }
+
     async _onAttackRoll(event) {
         event.preventDefault()
         const weaponId = event.currentTarget.closest('.item')?.dataset.itemId
@@ -503,7 +547,8 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             `<option value="${escape(key)}">${escape(game.i18n.localize(`AFMBE.Attributes.Primary.${key[0].toUpperCase()}${key.slice(1)}`))}</option>`
         ).join('')
         const skillOptions = skills.map(item => `<option value="${escape(item.id)}">${escape(item.name)} (${Number(item.system.level) || 0})</option>`).join('')
-        const hasMagazine = Number(weapon.system.capacity?.max) > 0
+        const magazineMode = Boolean(weapon.system.usesMagazines)
+        const hasMagazine = magazineMode || Number(weapon.system.capacity?.max) > 0
         const firingModes = [
             { value: 'semi', label: game.i18n.localize('AFMBE.Weapon.FiringMode.Semi') },
             { value: 'burst', label: game.i18n.localize('AFMBE.Weapon.FiringMode.Burst') },
@@ -522,7 +567,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             <div class="form-group"><label>Other modifier</label><input type="number" name="modifier" value="0" step="1"></div>
             <p>Range: ${rangeSummary}</p>
             <p>Offensive action: ${offensivePreview ? `used ${offensivePreview.counts.offensive}; repeat penalty ${-2 * offensivePreview.counts.offensive}` : 'outside combat (no repeat penalty)'}. Rechecked when rolled.</p>
-            ${hasMagazine ? `<div class="form-group"><label>Rounds fired</label><input type="number" name="shots" value="1" min="1" step="1"></div>
+            ${hasMagazine && !magazineMode ? `<div class="form-group"><label>Rounds fired</label><input type="number" name="shots" value="1" min="1" step="1"></div>
             <div class="form-group"><label>Firing mode</label><select name="firingMode">${firingModes.map(mode => `<option value="${mode.value}">${escape(mode.label)}</option>`).join('')}</select></div>
             <p>Magazine: ${Number(weapon.system.capacity.value) || 0} / ${Number(weapon.system.capacity.max)}</p>` : ''}
         </form>`
@@ -547,8 +592,11 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                         ui.notifications.warn('Target exactly one token before attacking.'); return
                     }
                     const target = targetedTokens[0].actor
-                    const shots = hasMagazine ? Number(form.elements.shots.value) : 0
-                    const remaining = Number(weapon.system.capacity?.value)
+                    const activeMagazine = loadedMagazine(this.actor, weapon)
+                    const shots = magazineMode ? 1 : hasMagazine ? Number(form.elements.shots.value) : 0
+                    const remaining = magazineMode ? Number(activeMagazine?.system.rounds) : Number(weapon.system.capacity?.value)
+                    if (magazineMode && (!activeMagazine || !Number.isSafeInteger(remaining) || remaining < 1)) { ui.notifications.warn(`${weapon.name} has no loaded rounds. Reload a magazine.`); return }
+                    const firedDamageType = magazineMode ? damageType(activeMagazine.system.ammoType) : damageType(weapon.system.damage_type)
                     if (hasMagazine && (!Number.isInteger(shots) || shots < 1 || !Number.isFinite(remaining) || shots > remaining)) {
                         ui.notifications.warn(`Not enough ammunition in ${weapon.name} for that attack.`)
                         return
@@ -556,21 +604,24 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                     let action
                     try { action = await spendAction(this.actor, 'offensive') }
                     catch (error) { ui.notifications.warn(error.message); return }
-                    if (hasMagazine) await weapon.update({ 'system.capacity.value': remaining - shots })
+                    if (magazineMode) {
+                        await activeMagazine.update({ 'system.rounds': remaining - 1 })
+                        await weapon.update({ 'system.capacity.value': remaining - 1 })
+                    } else if (hasMagazine) await weapon.update({ 'system.capacity.value': remaining - shots })
                     const roll = await new Roll('1d10').evaluate()
-                    const ammoHitBonus = hitBonus(weapon.system.damage_type)
+                    const ammoHitBonus = hitBonus(firedDamageType)
                     const total = roll.total + attribute + skillLevel + location + modifier + ammoHitBonus + range.penalty + action.penalty
                     const success = total >= 9
                     const degrees = success ? Math.floor((total - 9) / 2) + 1 : 0
                     const locationName = form.elements.location.selectedOptions[0].textContent
-                    const ammoNote = hasMagazine ? `<p>${shots} round${shots === 1 ? '' : 's'} fired (${escape(firingModes.find(mode => mode.value === form.elements.firingMode.value)?.label ?? '')}); ${weapon.system.capacity.value}/${weapon.system.capacity.max} remaining.</p>` : ''
+                    const ammoNote = hasMagazine ? `<p>${shots} round${shots === 1 ? '' : 's'} fired (${escape(magazineMode ? firedDamageType : firingModes.find(mode => mode.value === form.elements.firingMode.value)?.label ?? '')}); ${weapon.system.capacity.value}/${weapon.system.capacity.max} remaining.</p>` : ''
                     const rangeDetail = range.note ? 'range unconfigured (0)' : `range ${range.penalty} (${range.distance.toFixed(1)} m / ${range.normalRange} m)`
                     const content = `<h2>${escape(weapon.name)}</h2><div class="afmbe-roll-kind">Attack</div><p>${escape(attributeKey)} ${attribute}, ${escape(skill?.name ?? 'No skill')} ${skillLevel}, ${escape(locationName)}, modifier ${modifier}, ammo ${ammoHitBonus >= 0 ? "+" : ""}${ammoHitBonus}, ${rangeDetail}, action ${action.penalty}</p><p>Roll ${roll.total} + modifiers = <strong>${total}</strong> vs 9 — <strong>${success ? `Hit (${degrees} degree${degrees === 1 ? '' : 's'})` : 'Miss'}</strong></p>${ammoNote}`
                     await ChatMessage.create({ user: game.user.id, speaker: ChatMessage.getSpeaker({ actor: this.actor }),
                         content: content + `<p>${success ? `Awaiting ${escape(target.name)}’s defense.` : 'Attack misses; no damage roll.'}</p>`, rolls: [roll],
                         flags: { 'afmbe-left-behind': { pendingAttack: {
                             attackerUuid: this.actor.uuid, targetUuid: target.uuid, targetName: target.name,
-                            weaponUuid: weapon.uuid, weaponName: weapon.name, total, location: hitLocation,
+                            weaponUuid: weapon.uuid, weaponName: weapon.name, damageType: firedDamageType, total, location: hitLocation,
                             melee: isMeleeAttack(weapon), status: success ? 'pending' : 'miss', blocked: false
                         } } } })
                 } }

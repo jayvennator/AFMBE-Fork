@@ -26,6 +26,7 @@ export class afmbeItemSheet extends foundry.appv1.sheets.ItemSheet {
         data.attributeOptions = Object.fromEntries(["strength", "dexterity", "constitution", "intelligence", "perception", "willpower"].map(key => [key, key[0].toUpperCase() + key.slice(1)]));
         data.hasActor = this.item.parent instanceof Actor;
         data.normalizedDamageType = damageType(this.item.system.damage_type);
+        data.ammoDamageTypes = {"bullets": "Normal Bullet", "hollowPoint": "Hollow Point", "armorPiercing": "Armor Piercing", "slug": "Slug", "buckshot": "Buckshot", "birdshot": "Birdshot", "shotgun": "Shotgun", "explosive": "Explosive", "poison": "Poison", "corrosive": "Corrosive"};
         data.skillOptions = Object.fromEntries((this.item.parent?.items ?? []).filter(item => item.type === "skill").map(item => [item.name, item.name]));
         data.selectedSkillName = this.item.system.skillName || this.item.parent?.items.get(this.item.system.skillId)?.name || "";
         data.isGM = game.user.isGM;
