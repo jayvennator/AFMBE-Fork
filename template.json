@@ -347,7 +347,8 @@
             "attribute": "",
             "skillId": "",
             "bonus": 0,
-            "duration": 3
+            "duration": 3,
+            "skillName": ""
         }
     }
 }

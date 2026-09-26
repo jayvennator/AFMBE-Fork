@@ -23,7 +23,9 @@ export class afmbeItemSheet extends foundry.appv1.sheets.ItemSheet {
         const data = super.getData();
         data.dtypes = ["String", "Number", "Boolean"];
         data.attributeOptions = Object.fromEntries(["strength", "dexterity", "constitution", "intelligence", "perception", "willpower"].map(key => [key, key[0].toUpperCase() + key.slice(1)]));
-        data.skillOptions = Object.fromEntries((this.item.parent?.items ?? []).filter(item => item.type === "skill").map(item => [item.id, item.name]));
+        data.hasActor = this.item.parent instanceof Actor;
+        data.skillOptions = Object.fromEntries((this.item.parent?.items ?? []).filter(item => item.type === "skill").map(item => [item.name, item.name]));
+        data.selectedSkillName = this.item.system.skillName || this.item.parent?.items.get(this.item.system.skillId)?.name || "";
         data.isGM = game.user.isGM;
         data.editable = data.options.editable;
         const itemData = data.system;

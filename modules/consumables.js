@@ -19,13 +19,14 @@ export async function useConsumable(item) {
     const rounds = Number(item.system.duration || 0);
     const attribute = item.system.attribute;
     const skillId = item.system.skillId;
+    const skillName = String(item.system.skillName ?? "").trim();
+    const skill = skillName ? actor.items.find(entry => entry.type === "skill" && entry.name.trim().toLocaleLowerCase() === skillName.toLocaleLowerCase()) : actor.items.get(skillId);
     if (!Number.isInteger(heal) || heal < 0 || !Number.isInteger(bonus) || !Number.isInteger(rounds) || rounds < 0 || rounds > 100 ||
-        (bonus && (!rounds || (!ATTRIBUTES.includes(attribute) && actor.items.get(skillId)?.type !== 'skill'))) ||
+        (bonus && (!rounds || (!ATTRIBUTES.includes(attribute) && skill?.type !== 'skill'))) ||
         (!heal && !bonus)) return ui.notifications.warn('Configure healing or a valid timed bonus before using this item.');
     const effects = activeBonuses(actor);
     const hp = actor.system.secondaryAttributes?.hp;
     const restored = Math.min(heal, Math.max(0, Number(hp?.max || 0) - Number(hp?.value || 0)));
-    const skill = actor.items.get(skillId);
     const effect = bonus ? { id: foundry.utils.randomID(), name: item.name, attribute: ATTRIBUTES.includes(attribute) ? attribute : '', skillId: ATTRIBUTES.includes(attribute) ? '' : skill.id, bonus, rounds } : null;
     if (effect) effects.push(effect);
     // Keep the stack until all actor updates succeed, so a failed update never spends an item.
