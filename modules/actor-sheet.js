@@ -1,3 +1,5 @@
+import { applyArmorDamage } from './armor-damage.js';
+
 export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
 
     /** @override */
@@ -449,6 +451,8 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         event.preventDefault()
         let element = event.currentTarget
         let weapon = this.actor.getEmbeddedDocument("Item", element.closest('.item').dataset.itemId)
+        const targetedTokens = [...game.user.targets]
+        const target = targetedTokens.length === 1 ? targetedTokens[0].actor : null
 
         const dialogTitle = game.i18n.localize("AFMBE.Dialog.WeaponRoll.Title")
         const rangedInfo = game.i18n.localize("AFMBE.Dialog.WeaponRoll.RangedInfo")
@@ -495,6 +499,19 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                                                 </select>
                                             </td>
                                         </tr>
+                                        <tr>
+                                            <th>Target</th>
+                                            <td>${target ? foundry.utils.escapeHTML(target.name) : 'None selected (damage roll only)'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Hit location</th>
+                                            <td><select id="hitLocation" name="hitLocation">
+                                                <option value="body">Body</option>
+                                                <option value="head">Head</option>
+                                                <option value="arms">Arms</option>
+                                                <option value="legs">Legs</option>
+                                            </select></td>
+                                        </tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -513,6 +530,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                     callback: async html => {
                         const shotNumber = Number(html[0].querySelector('#shotNumber').value) || 0
                         const firingMode = html[0].querySelector('#firingMode').value
+                        const hitLocation = html[0].querySelector('#hitLocation').value
 
                         const roll = await new Roll(weapon.system.damage_string).evaluate()
 
@@ -558,13 +576,21 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                                                 </table>
                                             </div>`
 
-                        ChatMessage.create({
+                        const damageMessage = await ChatMessage.create({
                             user: game.user.id,
-                            speaker: ChatMessage.getSpeaker(),
+                            speaker: ChatMessage.getSpeaker({ actor: this.actor }),
                             flavor: `<div class="afmbe-tags-flex-container-item">${tags.join('')}</div>`,
                             content: chatContent,
-                            rolls: [roll]
+                            rolls: [roll],
+                            ...(target ? { flags: { 'afmbe-jesuisfrog': { armorDamage: {
+                                targetUuid: target.uuid,
+                                targetName: target.name,
+                                damage: roll.total,
+                                location: hitLocation,
+                                applied: false
+                            } } } } : {})
                         })
+                        if (target && game.user.isGM) await applyArmorDamage(damageMessage)
                     }
                 }
             },

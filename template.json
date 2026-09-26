@@ -304,6 +304,12 @@
             ],
             "equipped": false,
             "armor_value": "0",
+            "armor_coverage": {
+                "body": true,
+                "head": false,
+                "arms": false,
+                "legs": false
+            },
             "qty": 1
         },
         "aspect": {

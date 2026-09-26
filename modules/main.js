@@ -7,6 +7,7 @@ import { afmbeCreatureSheet } from "./creature-sheet.js"
 import { afmbevehicleSheet } from "./vehicle-sheet.js"
 import { registerTemplates } from "./register-templates.js";
 import { registerHandlebarsHelpers } from "./handlebars.js";
+import { applyArmorDamage } from "./armor-damage.js";
 
 /* -------------------------------------------- */
 /*  Foundry VTT Initialization                  */
@@ -82,6 +83,18 @@ Hooks.once("init", async function () {
 
 // Hook for Re-Rolls on Lucky/Unlucky Rolls
 Hooks.on("renderChatMessage", (app, html, data) => {
+    const armorDamage = app.getFlag('afmbe-jesuisfrog', 'armorDamage');
+    if (armorDamage && game.user.isGM && !armorDamage.applied) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = `Apply damage to ${armorDamage.targetName}`;
+        button.addEventListener('click', async () => {
+            button.disabled = true;
+            await applyArmorDamage(app);
+            if (!app.getFlag('afmbe-jesuisfrog', 'armorDamage')?.applied) button.disabled = false;
+        });
+        html[0].querySelector('.message-content')?.append(button);
+    }
     let chatButton = html[0].querySelector("[data-roll='roll-again']")
 
     if (chatButton != undefined && chatButton != null) {

@@ -868,3 +868,6 @@
 .afmbe-jesuisfrog.dark-mode .item-name:hover {
     font-weight: bold;
 }
+/* Armor coverage controls on equipment sheets. */
+.afmbe-armor-coverage label { display: inline-flex; align-items: center; margin-right: 0.5rem; white-space: nowrap; }
+.afmbe-armor-coverage input { width: auto; margin-right: 0.2rem; }

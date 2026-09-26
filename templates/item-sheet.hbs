@@ -26,6 +26,15 @@
                             <td><input type="text" name="system.armor_value" value="{{item.system.armor_value}}"></td>
                         </tr>
                         <tr>
+                            <th>Armor coverage</th>
+                            <td class="afmbe-armor-coverage">
+                                <label><input type="checkbox" name="system.armor_coverage.body" {{checked item.system.armor_coverage.body}}>Body</label>
+                                <label><input type="checkbox" name="system.armor_coverage.head" {{checked item.system.armor_coverage.head}}>Head</label>
+                                <label><input type="checkbox" name="system.armor_coverage.arms" {{checked item.system.armor_coverage.arms}}>Arms</label>
+                                <label><input type="checkbox" name="system.armor_coverage.legs" {{checked item.system.armor_coverage.legs}}>Legs</label>
+                            </td>
+                        </tr>
+                        <tr>
                             <th>{{localize 'AFMBE.Common.EV'}}</th>
                             <td><input type="number" name="system.encumbrance" value="{{item.system.encumbrance}}"></td>
                         </tr>
