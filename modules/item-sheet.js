@@ -1,3 +1,4 @@
+import { damageType } from './damage-types.js';
 export class afmbeItemSheet extends foundry.appv1.sheets.ItemSheet {
 
     /** @override */
@@ -24,6 +25,7 @@ export class afmbeItemSheet extends foundry.appv1.sheets.ItemSheet {
         data.dtypes = ["String", "Number", "Boolean"];
         data.attributeOptions = Object.fromEntries(["strength", "dexterity", "constitution", "intelligence", "perception", "willpower"].map(key => [key, key[0].toUpperCase() + key.slice(1)]));
         data.hasActor = this.item.parent instanceof Actor;
+        data.normalizedDamageType = damageType(this.item.system.damage_type);
         data.skillOptions = Object.fromEntries((this.item.parent?.items ?? []).filter(item => item.type === "skill").map(item => [item.name, item.name]));
         data.selectedSkillName = this.item.system.skillName || this.item.parent?.items.get(this.item.system.skillId)?.name || "";
         data.isGM = game.user.isGM;

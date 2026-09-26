@@ -1,3 +1,4 @@
+import { damageType, hitBonus } from './damage-types.js';
 import { activeBonuses, attributeBonus, skillBonus, useConsumable, endConsumableEffect } from './consumables.js';
 import { applyArmorDamage, postArmorRoll } from './armor-damage.js';
 
@@ -472,12 +473,13 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                         await weapon.update({ 'system.capacity.value': remaining - shots })
                     }
                     const roll = await new Roll('1d10').evaluate()
-                    const total = roll.total + attribute + skillLevel + location + modifier
+                    const ammoHitBonus = hitBonus(weapon.system.damage_type)
+                    const total = roll.total + attribute + skillLevel + location + modifier + ammoHitBonus
                     const success = total >= 9
                     const degrees = success ? Math.floor((total - 9) / 2) + 1 : 0
                     const locationName = form.elements.location.selectedOptions[0].textContent
                     const ammoNote = hasMagazine ? `<p>${shots} round${shots === 1 ? '' : 's'} fired (${escape(firingModes.find(mode => mode.value === form.elements.firingMode.value)?.label ?? '')}); ${weapon.system.capacity.value}/${weapon.system.capacity.max} remaining.</p>` : ''
-                    const content = `<h2>${escape(weapon.name)}</h2><div class="afmbe-roll-kind">Attack</div><p>${escape(attributeKey)} ${attribute}, ${escape(skill?.name ?? 'No skill')} ${skillLevel}, ${escape(locationName)}, modifier ${modifier}</p><p>Roll ${roll.total} + modifiers = <strong>${total}</strong> vs 9 — <strong>${success ? `Hit (${degrees} degree${degrees === 1 ? '' : 's'})` : 'Miss'}</strong></p>${ammoNote}`
+                    const content = `<h2>${escape(weapon.name)}</h2><div class="afmbe-roll-kind">Attack</div><p>${escape(attributeKey)} ${attribute}, ${escape(skill?.name ?? 'No skill')} ${skillLevel}, ${escape(locationName)}, modifier ${modifier}, ammo ${ammoHitBonus >= 0 ? "+" : ""}${ammoHitBonus}</p><p>Roll ${roll.total} + modifiers = <strong>${total}</strong> vs 9 — <strong>${success ? `Hit (${degrees} degree${degrees === 1 ? '' : 's'})` : 'Miss'}</strong></p>${ammoNote}`
                     await ChatMessage.create({ user: game.user.id, speaker: ChatMessage.getSpeaker({ actor: this.actor }), content, rolls: [roll] })
                 } }
             },
@@ -558,7 +560,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                                                     <tbody>
                                                         <tr>
                                                             <td class="table-center-align">[[${roll.result}]]</td>
-                                                            <td class="table-center-align">${weapon.system.damage_types[weapon.system.damage_type]}</td>
+                                                            <td class="table-center-align">${foundry.utils.escapeHTML(weapon.system.damage_types_obj[damageType(weapon.system.damage_type)] ?? damageType(weapon.system.damage_type))}</td>
                                                             <td class="table-center-align">${weapon.system.damage_string}</td>
                                                         </tr>
                                                     </tbody>
@@ -574,6 +576,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                                 targetUuid: target.uuid,
                                 targetName: target.name,
                                 damage: roll.total,
+                                damageType: damageType(weapon.system.damage_type),
                                 location: hitLocation,
                                 applied: false
                             } } } } : {})

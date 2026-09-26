@@ -227,7 +227,10 @@
                     "Shotgun",
                     "Explosive",
                     "Poison",
-                    "Corrosive"
+                    "Corrosive",
+                    "Slug",
+                    "Buckshot",
+                    "Birdshot"
                 ],
                 "damage_types_obj": {
                     "none": "None",
@@ -240,7 +243,10 @@
                     "shotgun": "Shotgun",
                     "explosive": "Explosive",
                     "poison": "Poison",
-                    "corrosive": "Corrosive"
+                    "corrosive": "Corrosive",
+                    "slug": "Slug",
+                    "buckshot": "Buckshot",
+                    "birdshot": "Birdshot"
                 },
                 "damage_characteristics": {
                     "none": "None",

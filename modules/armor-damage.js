@@ -1,3 +1,4 @@
+import { resolveDamage, damageType } from './damage-types.js';
 const SYSTEM_ID = 'afmbe-left-behind';
 const applying = new Set();
 
@@ -59,13 +60,14 @@ export async function applyArmorDamage(message) {
             await postArmorRoll(actor, null, roll, '0');
         }
 
-        const absorbed = Math.min(damage, protection);
-        const hpDamage = damage - absorbed;
+        const type = damageType(data.damageType);
+        const result = resolveDamage(damage, protection, type);
+        const hpDamage = result.hpDamage;
         await actor.update({ 'system.secondaryAttributes.hp.value': hp - hpDamage }, { enforceTypes: false });
         // Mark the source roll applied before posting the final result so it cannot be reused.
         await message.update({ [`flags.${SYSTEM_ID}.armorDamage.applied`]: true });
         const summary = `<h2>Damage Calculation</h2><p><strong>${foundry.utils.escapeHTML(actor.name)} — ${location}</strong><br>` +
-            `Damage ${damage} − armor ${absorbed} = <strong>${hpDamage} HP</strong><br>` +
+            `Type ${foundry.utils.escapeHTML(type)}: damage ${damage}${result.meleeBonus ? " + 1 melee" : ""} − armor ${protection} × ${result.armorMultiplier} = ${result.penetrating}; × ${result.damageMultiplier} = <strong>${hpDamage} HP</strong><br>` +
             `HP ${hp} → ${hp - hpDamage}</p>`;
         await ChatMessage.create({
             user: game.user.id,

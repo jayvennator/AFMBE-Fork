@@ -37,7 +37,7 @@
                             <th>{{localize 'AFMBE.Item.Attributes.DamageType'}}</th>
                             <td>
                                 <select id="damageTypeSelect" name="system.damage_type" data-type="String">
-                                    {{#selectOptions item.system.damage_types selected=item.system.damage_type}}
+                                    {{#selectOptions item.system.damage_types_obj selected=normalizedDamageType}}
                                     {{/selectOptions}}
                                 </select>
                             </td>
