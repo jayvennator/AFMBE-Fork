@@ -19,7 +19,7 @@
                 <td>
                     <div class="item-name-flex-container">
                         <button type="button" class="attack-roll" title="Roll attack">Attack</button>
-                        <button type="button" class="damage-roll" title="Roll damage">Damage</button>
+                        {{#if @root.isGM}}<button type="button" class="damage-roll" title="GM manual damage">Manual Damage</button>{{/if}}
                         <div class="item-name">{{item.name}}</div>
                     </div>
                 </td>

@@ -1,3 +1,4 @@
+import { handleDefenseResponse, renderLinkedAttack } from './linked-combat.js';
 import { advanceConsumables } from './consumables.js';
 // Import Modules
 import { afmbeActorSheet } from "./actor-sheet.js";
@@ -86,12 +87,13 @@ Hooks.once("init", async function () {
 // Foundry broadcasts the new message to all clients; only one GM handles it.
 Hooks.on('createChatMessage', (message) => {
     if (!game.user.isGM || game.users.activeGM?.id !== game.user.id) return;
-    if (!message.getFlag('afmbe-left-behind', 'armorDamage')) return;
-    void applyArmorDamage(message);
+    if (message.getFlag('afmbe-left-behind', 'armorDamage')) void applyArmorDamage(message);
+    if (message.getFlag('afmbe-left-behind', 'defenseResponse')) void handleDefenseResponse(message);
 });
 
 // Hook for Re-Rolls on Lucky/Unlucky Rolls
 Hooks.on("renderChatMessage", (app, html, data) => {
+    void renderLinkedAttack(app, html[0]);
     const armorDamage = app.getFlag('afmbe-left-behind', 'armorDamage');
     if (armorDamage && game.user.isGM && !armorDamage.applied) {
         const button = document.createElement('button');
@@ -203,5 +205,13 @@ Hooks.on('updateCombat', (combat, changes) => {
     if (!Object.hasOwn(changes, 'turn') && !Object.hasOwn(changes, 'round')) return;
     for (const actor of new Set(combat.combatants.map(combatant => combatant.actor).filter(Boolean))) {
         if (actor.sheet?.rendered) actor.sheet.render(false);
+    }
+});
+
+// Catch defense replies posted while the GM was disconnected. Only the designated GM replays them.
+Hooks.once('ready', async () => {
+    if (!game.user.isGM || game.users.activeGM?.id !== game.user.id) return;
+    for (const message of game.messages) {
+        if (message.getFlag('afmbe-left-behind', 'defenseResponse')) await handleDefenseResponse(message);
     }
 });

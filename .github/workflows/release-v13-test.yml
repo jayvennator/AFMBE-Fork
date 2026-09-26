@@ -17,18 +17,18 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Foundry package
         run: |
-          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.15.zip" . -x '.git/*' '.github/*'
+          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.16.zip" . -x '.git/*' '.github/*'
           cp system.json "$RUNNER_TEMP/system.json"
-          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.15.zip" system.json | python3 -m json.tool >/dev/null
-          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.15.zip"
+          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.16.zip" system.json | python3 -m json.tool >/dev/null
+          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.16.zip"
       - name: Publish prerelease
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.2.1-test.15 \
-            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.15.zip" \
+          gh release create v1.2.1-test.16 \
+            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.16.zip" \
             "$RUNNER_TEMP/system.json" \
             --target "$GITHUB_SHA" \
-            --title "AFMBE: Left Behind V13 combat defense rolls test 15" \
-            --notes "Foundry V13 build 351 test. Adds defense and help action roll dialogs with attribute and skill selection; defensive and help counters are spent on rolling with repeat penalties. Defense outcomes are posted to chat for the GM." \
+            --title "AFMBE: Left Behind V13 linked combat test 16" \
+            --notes "Foundry V13 build 351 test. Links attack, defense, damage, armor, and HP across separate chat messages for a single target. Successful blocks halve HP damage after armor; GM manual damage remains available." \
             --prerelease
