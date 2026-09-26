@@ -1,3 +1,4 @@
+import { advanceConsumables } from './consumables.js';
 // Import Modules
 import { afmbeActorSheet } from "./actor-sheet.js";
 import { afmbeActor } from "./actor.js";
@@ -186,3 +187,5 @@ Hooks.on("renderChatMessage", (app, html, data) => {
         })
     }
 })
+
+Hooks.on('updateCombat', advanceConsumables);

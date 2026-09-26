@@ -7,7 +7,7 @@
         ],
         "templates": {
             "attributes": {
-                "primaryAttributes":{
+                "primaryAttributes": {
                     "strength": {
                         "value": 0,
                         "halfValue": 0,
@@ -32,9 +32,9 @@
                     "willpower": {
                         "value": 0,
                         "max": 0
-                    }                  
+                    }
                 },
-                "secondaryAttributes":{
+                "secondaryAttributes": {
                     "hp": {
                         "value": 0,
                         "max": 0,
@@ -70,7 +70,7 @@
                     "level": 0
                 }
             },
-            "character":{
+            "character": {
                 "characterType": 0,
                 "characterTypes": [
                     "Norm",
@@ -150,7 +150,7 @@
                     "max": 0
                 }
             },
-            "details":{
+            "details": {
                 "bio": {
                     "gender": "",
                     "age": 0,
@@ -185,7 +185,11 @@
             "handling": 0,
             "accuracy": 0,
             "cost": 0,
-            "availabilityOptions":["Common", "Uncommon", "Rare"],
+            "availabilityOptions": [
+                "Common",
+                "Uncommon",
+                "Rare"
+            ],
             "availability": "",
             "damage_capacity": 0,
             "armor_value": 0
@@ -199,6 +203,7 @@
             "power",
             "weapon",
             "armor",
+            "consumable",
             "item",
             "aspect"
         ],
@@ -332,6 +337,17 @@
                 "common"
             ],
             "power": 0
+        },
+        "consumable": {
+            "templates": [
+                "common"
+            ],
+            "qty": 1,
+            "healing": 0,
+            "attribute": "",
+            "skillId": "",
+            "bonus": 0,
+            "duration": 3
         }
     }
 }

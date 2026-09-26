@@ -1,0 +1,52 @@
+export const CONSUMABLE_FLAG = 'afmbe-left-behind';
+export const ATTRIBUTES = ['strength', 'dexterity', 'constitution', 'intelligence', 'perception', 'willpower'];
+export function activeBonuses(actor) {
+    return (actor.getFlag(CONSUMABLE_FLAG, 'consumableEffects') ?? []).filter(effect => Number(effect.rounds) > 0);
+}
+export function attributeBonus(actor, key) {
+    return activeBonuses(actor).filter(effect => effect.attribute === key).reduce((sum, effect) => sum + Number(effect.bonus || 0), 0);
+}
+export function skillBonus(actor, skill) {
+    return activeBonuses(actor).filter(effect => effect.skillId === skill?.id).reduce((sum, effect) => sum + Number(effect.bonus || 0), 0);
+}
+export async function useConsumable(item) {
+    const actor = item?.parent;
+    if (item?.type !== 'consumable' || !actor?.isOwner) return;
+    const qty = Number(item.system.qty);
+    if (!Number.isInteger(qty) || qty < 1) return ui.notifications.warn('No consumables remaining.');
+    const heal = Number(item.system.healing || 0);
+    const bonus = Number(item.system.bonus || 0);
+    const rounds = Number(item.system.duration || 0);
+    const attribute = item.system.attribute;
+    const skillId = item.system.skillId;
+    if (!Number.isInteger(heal) || heal < 0 || !Number.isInteger(bonus) || !Number.isInteger(rounds) || rounds < 0 || rounds > 100 ||
+        (bonus && (!rounds || (!ATTRIBUTES.includes(attribute) && actor.items.get(skillId)?.type !== 'skill'))) ||
+        (!heal && !bonus)) return ui.notifications.warn('Configure healing or a valid timed bonus before using this item.');
+    const effects = activeBonuses(actor);
+    const hp = actor.system.secondaryAttributes?.hp;
+    const restored = Math.min(heal, Math.max(0, Number(hp?.max || 0) - Number(hp?.value || 0)));
+    const skill = actor.items.get(skillId);
+    const effect = bonus ? { id: foundry.utils.randomID(), name: item.name, attribute: ATTRIBUTES.includes(attribute) ? attribute : '', skillId: ATTRIBUTES.includes(attribute) ? '' : skill.id, bonus, rounds } : null;
+    if (effect) effects.push(effect);
+    // Keep the stack until all actor updates succeed, so a failed update never spends an item.
+    const changes = { ...(restored ? { 'system.secondaryAttributes.hp.value': Number(hp.value) + restored } : {}),
+        ...(effect ? { [`flags.${CONSUMABLE_FLAG}.consumableEffects`]: effects } : {}) };
+    try {
+        if (Object.keys(changes).length) await actor.update(changes);
+        await item.update({ 'system.qty': qty - 1 });
+        const escape = foundry.utils.escapeHTML;
+        const details = [restored ? `Restored ${restored} HP` : '', effect ? `${bonus > 0 ? '+' : ''}${bonus} ${effect.attribute || skill.name} for ${rounds} rounds` : ''].filter(Boolean).join('; ');
+        await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<h2>${escape(actor.name)} uses ${escape(item.name)}</h2><p>${escape(details || 'No HP restored (already at maximum)')}</p>` });
+    } catch (error) { console.error('AFMBE consumable use failed', error); ui.notifications.error('Could not use consumable; check its quantity and effects.'); }
+}
+export async function advanceConsumables(combat, changed) {
+    if (!game.user.isGM || !Object.hasOwn(changed, 'round') || Number(changed.round) <= 0) return;
+    for (const actor of new Set(combat.combatants.map(combatant => combatant.actor).filter(Boolean))) {
+        const effects = activeBonuses(actor);
+        if (!effects.length) continue;
+        const previous = Number(combat.previous?.round ?? Number(changed.round) - 1);
+        const elapsed = Math.max(0, Number(changed.round) - previous);
+        if (!elapsed) continue;
+        await actor.setFlag(CONSUMABLE_FLAG, 'consumableEffects', effects.map(effect => ({ ...effect, rounds: effect.rounds - elapsed })).filter(effect => effect.rounds > 0));
+    }
+}

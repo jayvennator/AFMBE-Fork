@@ -1,3 +1,4 @@
+import { activeBonuses, attributeBonus, skillBonus, useConsumable, CONSUMABLE_FLAG } from './consumables.js';
 import { applyArmorDamage, postArmorRoll } from './armor-damage.js';
 
 export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
@@ -41,6 +42,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         const item = [];
         const equippedItem = [];
         const armor = [];
+        const consumable = [];
         const weapon = [];
         const power = [];
         const quality = [];
@@ -57,6 +59,10 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
 
                 case "weapon":
                     weapon.push(i)
+                    break
+
+                case "consumable":
+                    consumable.push(i)
                     break
 
                 case "armor":
@@ -82,7 +88,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         }
 
         // Alphabetically sort all items
-        const itemCats = [item, equippedItem, weapon, armor, power, quality, skill, drawback]
+        const itemCats = [item, equippedItem, weapon, armor, consumable, power, quality, skill, drawback]
         for (let category of itemCats) {
             if (category.length > 1) {
                 category.sort((a, b) => {
@@ -99,6 +105,8 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         actorData.equippedItem = equippedItem
         actorData.weapon = weapon
         actorData.armor = armor
+        actorData.consumable = consumable
+        actorData.activeConsumables = activeBonuses(this.actor)
         actorData.power = power
         actorData.quality = quality
         actorData.skill = skill
@@ -125,6 +133,12 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         if (this.actor.isOwner) html.find('.damage-roll').click(this._onDamageRoll.bind(this))
         html.find('.toggleEquipped').click(this._onToggleEquipped.bind(this))
         html.find('.armor-button-cell button').click(this._onArmorRoll.bind(this))
+        html.find('.use-consumable').click(event => useConsumable(this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)))
+        html.find('.end-consumable').click(async event => {
+            if (!this.actor.isOwner) return;
+            const remaining = activeBonuses(this.actor).filter(effect => effect.id !== event.currentTarget.dataset.effectId);
+            await this.actor.setFlag(CONSUMABLE_FLAG, 'consumableEffects', remaining);
+        })
         html.find('.reset-resource').click(this._onResetResource.bind(this))
 
         // Update/Open Inventory Item
@@ -228,7 +242,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         ]
         const attributeTestNames = Object.fromEntries(attributeTestOptions.map(opt => [opt.value, opt.label]))
 
-        const attributeValueBase = actorData.primaryAttributes[attributeKey]?.value ?? 0
+        const attributeValueBase = Number(actorData.primaryAttributes[attributeKey]?.value ?? 0) + attributeBonus(this.actor, attributeKey)
 
         const buildOptions = (items, formatter) => items.map(entry => `
                                                 <option value="${entry.id}">${formatter(entry)}</option>`).join("")
@@ -326,14 +340,14 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                         const selectedDrawback = this.actor.getEmbeddedDocument("Item", html[0].querySelector('#drawbackSelect').value)
 
                         const attributeValue = attributeTestSelect === 'simple' ? attributeValueBase * 2 : attributeValueBase
-                        const skillValue = selectedSkill ? selectedSkill.system.level : 0
+                        const skillValue = selectedSkill ? Number(selectedSkill.system.level) + skillBonus(this.actor, selectedSkill) : 0
                         const qualityValue = selectedQuality ? selectedQuality.system.bonus : 0
                         const drawbackValue = selectedDrawback ? selectedDrawback.system.bonus : 0
 
                         let tags = []
                         if (userInputModifier !== 0) { tags.push(`<span class="${userInputModifier >= 0 ? "bonusColorClass" : 'penaltyColorClass'}">${userModifierLabel} ${userInputModifier >= 0 ? "+" : ''}${userInputModifier}</span>`) }
                         if (selectedSkill) {
-                            const skillLevel = selectedSkill.system.level;
+                            const skillLevel = Number(selectedSkill.system.level) + skillBonus(this.actor, selectedSkill);
                             tags.push(`<span class="${skillLevel >= 0 ? 'bonusColorClass' : 'penaltyColorClass'}">${selectedSkill.name} ${skillLevel >= 0 ? '+' : ''}${skillLevel}</span>`)
                         }
                         if (selectedQuality) {
@@ -444,9 +458,9 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                 attack: { label: 'Roll attack', callback: async html => {
                     const form = html[0].querySelector('form')
                     const attributeKey = form.elements.attribute.value
-                    const attribute = Number(attributes[attributeKey]?.value) || 0
+                    const attribute = (Number(attributes[attributeKey]?.value) || 0) + attributeBonus(this.actor, attributeKey)
                     const skill = this.actor.items.get(form.elements.skill.value)
-                    const skillLevel = Number(skill?.system.level) || 0
+                    const skillLevel = (Number(skill?.system.level) || 0) + skillBonus(this.actor, skill)
                     const location = Number(form.elements.location.value) || 0
                     const modifier = Number(form.elements.modifier.value) || 0
                     const shots = hasMagazine ? Number(form.elements.shots.value) : 0
