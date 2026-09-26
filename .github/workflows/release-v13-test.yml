@@ -17,18 +17,18 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Foundry package
         run: |
-          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.10.zip" . -x '.git/*' '.github/*'
+          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.11.zip" . -x '.git/*' '.github/*'
           cp system.json "$RUNNER_TEMP/system.json"
-          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.10.zip" system.json | python3 -m json.tool >/dev/null
-          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.10.zip"
+          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.11.zip" system.json | python3 -m json.tool >/dev/null
+          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.11.zip"
       - name: Publish prerelease
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.2.1-test.10 \
-            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.10.zip" \
+          gh release create v1.2.1-test.11 \
+            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.11.zip" \
             "$RUNNER_TEMP/system.json" \
             --target "$GITHUB_SHA" \
-            --title "AFMBE: Left Behind V13 damage types test 10" \
-            --notes "Foundry V13 build 351 test. Applies documented bullet, shotgun and melee damage modifiers after armor rolls; adds slug, buckshot and birdshot options with hit bonuses." \
+            --title "AFMBE: Left Behind V13 player damage automation test 11" \
+            --notes "Foundry V13 build 351 test. Automatically routes player damage chat messages to the designated active GM for armor rolls and NPC HP deduction. Retains GM apply button as a fallback." \
             --prerelease

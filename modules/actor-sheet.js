@@ -1,6 +1,6 @@
 import { damageType, hitBonus } from './damage-types.js';
 import { activeBonuses, attributeBonus, skillBonus, useConsumable, endConsumableEffect } from './consumables.js';
-import { applyArmorDamage, postArmorRoll } from './armor-damage.js';
+import { postArmorRoll } from './armor-damage.js';
 
 export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
 
@@ -581,7 +581,6 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                                 applied: false
                             } } } } : {})
                         })
-                        if (target && game.user.isGM) await applyArmorDamage(damageMessage)
                     }
                 }
             },

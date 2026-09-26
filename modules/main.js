@@ -82,6 +82,14 @@ Hooks.once("init", async function () {
 /*  Chat Message Hooks                          */
 /* -------------------------------------------- */
 
+// A player can roll damage, while the designated GM performs the protected NPC update.
+// Foundry broadcasts the new message to all clients; only one GM handles it.
+Hooks.on('createChatMessage', (message) => {
+    if (!game.user.isGM || game.users.activeGM?.id !== game.user.id) return;
+    if (!message.getFlag('afmbe-left-behind', 'armorDamage')) return;
+    void applyArmorDamage(message);
+});
+
 // Hook for Re-Rolls on Lucky/Unlucky Rolls
 Hooks.on("renderChatMessage", (app, html, data) => {
     const armorDamage = app.getFlag('afmbe-left-behind', 'armorDamage');
