@@ -272,6 +272,7 @@
                 "swingsPerAction": 1,
                 "strain": 0,
                 "rateOfFire": 1,
+                "burstSize": 3,
                 "recoil": 0,
                 "loadedMagazineId": "",
                 "usesMagazines": false

@@ -38,42 +38,33 @@ export async function applyArmorDamage(message) {
         if (!Number.isFinite(hp)) throw new Error('The target has no numeric HP value.');
         const damage = Math.max(0, Number(data.damage) || 0);
         const location = ['body', 'head', 'arms', 'legs'].includes(data.location) ? data.location : 'body';
-        let protection = 0;
-        let coveringItems = 0;
-
-        for (const item of actor.items) {
-            // Generic items remain valid armor until their owners convert them.
-            if (!['item', 'armor'].includes(item.type) || !item.system.equipped) continue;
-            // Existing armor items created before coverage was added protect the body.
-            const coverage = item.system.armor_coverage ?? { body: true };
-            if (!coverage[location]) continue;
-            const formula = String(item.system.armor_value ?? '0').trim() || '0';
-            const roll = await new Roll(formula).evaluate();
-            const value = Math.max(0, Number(roll.total) || 0);
-            protection += value;
-            coveringItems++;
-            await postArmorRoll(actor, item, roll, formula);
-        }
-
-        if (!coveringItems) {
-            const roll = await new Roll('0').evaluate();
-            await postArmorRoll(actor, null, roll, '0');
-        }
-
+        const damages = Array.isArray(data.damages) && data.damages.length <= 10 && data.damages.length > 0
+            ? data.damages.map(value => Math.max(0, Number(value) || 0)) : [damage];
         const type = damageType(data.damageType);
-        const result = resolveDamage(damage, protection, type);
-        const hpDamage = data.blocked ? Math.floor(result.hpDamage / 2) : result.hpDamage;
-        await actor.update({ 'system.secondaryAttributes.hp.value': hp - hpDamage }, { enforceTypes: false });
-        // Mark the source roll applied before posting the final result so it cannot be reused.
+        const results = [];
+        for (const [index, raw] of damages.entries()) {
+            let protection = 0;
+            let coveringItems = 0;
+            for (const item of actor.items) {
+                if (!['item', 'armor'].includes(item.type) || !item.system.equipped) continue;
+                const coverage = item.system.armor_coverage ?? { body: true };
+                if (!coverage[location]) continue;
+                const formula = String(item.system.armor_value ?? '0').trim() || '0';
+                const roll = await new Roll(formula).evaluate();
+                protection += Math.max(0, Number(roll.total) || 0);
+                coveringItems++;
+                await postArmorRoll(actor, item, roll, formula);
+            }
+            if (!coveringItems) await postArmorRoll(actor, null, await new Roll('0').evaluate(), '0');
+            const resolved = resolveDamage(raw, protection, type);
+            results.push({ raw, protection, damage: data.blocked ? Math.floor(resolved.hpDamage / 2) : resolved.hpDamage });
+        }
+        const total = results.reduce((sum, hit) => sum + hit.damage, 0);
+        await actor.update({ 'system.secondaryAttributes.hp.value': hp - total }, { enforceTypes: false });
         await message.update({ [`flags.${SYSTEM_ID}.armorDamage.applied`]: true });
-        const summary = `<h2>Damage Calculation</h2><p><strong>${foundry.utils.escapeHTML(actor.name)} — ${location}</strong><br>` +
-            `Type ${foundry.utils.escapeHTML(type)}: damage ${damage}${result.meleeBonus ? " + 1 melee" : ""} − armor ${protection} × ${result.armorMultiplier} = ${result.penetrating}; × ${result.damageMultiplier} = ${result.hpDamage}${data.blocked ? `; block halves damage to <strong>${hpDamage} HP</strong>` : ' HP'}<br>` +
-            `HP ${hp} → ${hp - hpDamage}</p>`;
-        await ChatMessage.create({
-            user: game.user.id,
-            speaker: ChatMessage.getSpeaker({ actor }),
-            content: summary
-        });
+        const lines = results.map((hit, index) => `Hit ${index + 1}: ${hit.raw} raw, ${hit.protection} armor, ${hit.damage} HP`).join('<br>');
+        await ChatMessage.create({ user: game.user.id, speaker: ChatMessage.getSpeaker({ actor }),
+            content: `<h2>Damage Calculation</h2><p><strong>${foundry.utils.escapeHTML(actor.name)} — ${location}</strong><br>Type ${foundry.utils.escapeHTML(type)}${data.blocked ? '; blocked' : ''}<br>${lines}<br>Total ${total} HP; HP ${hp} → ${hp - total}</p>` });
     } catch (error) {
         console.error('AFMBE armor damage failed', error);
         ui.notifications.error(`AFMBE armor damage: ${error.message}`);

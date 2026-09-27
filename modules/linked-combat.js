@@ -2,6 +2,7 @@ import { spendAction } from './action-economy.js';
 import { attributeBonus, skillBonus } from './consumables.js';
 import { damageType } from './damage-types.js';
 import { weaponCategory } from './weapon-feed.js';
+import { volleyHits } from './fire-modes.js';
 const SYSTEM_ID = 'afmbe-left-behind';
 const resolving = new Set();
 const rolling = new Set();
@@ -42,7 +43,9 @@ export async function handleDefenseResponse(response) {
         if (!defender || !sender || (!sender.isGM && !defender.testUserPermission(sender, 'OWNER'))) return;
         if (data.mode !== 'none' && (!Number.isFinite(data.total) || !response.rolls?.length)) return;
         const outcome = defenseOutcome(attack, data.mode, Number(data.total));
-        await message.update({ [`flags.${SYSTEM_ID}.pendingAttack.status`]: outcome.status,
+        const adjustedHits = data.mode === 'duck' && Number(data.total) >= 9 && outcome.status === 'ready'
+            ? volleyHits(attack.firingMode, attack.total - 2, Number(attack.roundsFired) || 1) : attack.hits;
+        await message.update({ [`flags.${SYSTEM_ID}.pendingAttack.hits`]: adjustedHits, [`flags.${SYSTEM_ID}.pendingAttack.status`]: outcome.status,
             [`flags.${SYSTEM_ID}.pendingAttack.blocked`]: outcome.blocked,
             [`flags.${SYSTEM_ID}.pendingAttack.defenseResult`]: outcome.result });
         await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: defender }),
@@ -114,11 +117,14 @@ export async function rollLinkedDamage(message) {
     try {
         // Claim the attack before rolling so the chat control cannot apply it twice.
         await message.update({ [`flags.${SYSTEM_ID}.pendingAttack.status`]: 'rolling' });
-        const roll = await new Roll(weapon.system.damage_string).evaluate();
-        await ChatMessage.create({ user: game.user.id, speaker: ChatMessage.getSpeaker({ actor: attacker }), rolls: [roll],
-            content: `<h2>Damage Roll</h2><div class="afmbe-roll-kind">${foundry.utils.escapeHTML(weapon.name)}</div><p>${foundry.utils.escapeHTML(weapon.system.damage_string)} = <strong>${roll.total}</strong>${attack.blocked ? ' (blocked: damage after armor is halved)' : ''}</p>`,
+        const hits = Math.max(1, Math.min(10, Number(attack.hits) || 1));
+        const rolls = [];
+        for (let i = 0; i < hits; i++) rolls.push(await new Roll(weapon.system.damage_string).evaluate());
+        const values = rolls.map(roll => roll.total);
+        await ChatMessage.create({ user: game.user.id, speaker: ChatMessage.getSpeaker({ actor: attacker }), rolls,
+            content: `<h2>Damage Rolls</h2><div class="afmbe-roll-kind">${foundry.utils.escapeHTML(weapon.name)}</div><p>${hits} hit(s): ${values.join(', ')}. Each hit resolves against armor separately.${attack.blocked ? ' Block halves damage after armor for each hit.' : ''}</p>`,
             flags: { [SYSTEM_ID]: { armorDamage: { targetUuid: attack.targetUuid, targetName: attack.targetName,
-                damage: roll.total, damageType: damageType(attack.damageType ?? weapon.system.damage_type), location: attack.location,
+                damage: values[0], damages: values, damageType: damageType(attack.damageType ?? weapon.system.damage_type), location: attack.location,
                 blocked: Boolean(attack.blocked), applied: false, attackUuid: message.uuid } } } });
         await message.update({ [`flags.${SYSTEM_ID}.pendingAttack.status`]: 'complete' });
     } catch (error) {
