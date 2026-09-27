@@ -12,13 +12,16 @@
             </tr>
         </thead>
         <tbody>
-            {{#each actor.skill as |item id|}}
+            {{#each actor.skillGroups as |group|}}
+            <tr><th colspan="3" class="table-left-align">{{group.label}}</th></tr>
+            {{#each group.items as |item|}}
             <tr class="item" data-item-id="{{item._id}}">
                 <td class="item-name">{{item.name}}</td>
                 <td class="table-center-align">{{item.system.level}}</td>
                 <td class="table-center-align"><a class="item-control item-delete" title="{{localize 'AFMBE.Items.Delete'}}"><i
                             class="fas fa-trash"></i></a></td>
             </tr>
+            {{/each}}
             {{/each}}
         </tbody>
     </table>

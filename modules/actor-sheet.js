@@ -12,6 +12,7 @@ import { postArmorRoll } from './armor-damage.js';
 import { promptArmorReplenishment } from './armor-replenishment.js';
 import { armorIntegrity } from './armor-integrity.js';
 import { attachmentModifiers, promptInstallAttachment, removeAttachment } from './attachments.js';
+import { SKILL_CATEGORIES, skillCategory } from './skill-categories.js';
 import { loadedMagazine, compatibleMagazines, reloadWeapon, loadMagazine } from './magazines.js';
 
 export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
@@ -152,6 +153,8 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         actorData.power = power
         actorData.quality = quality
         actorData.skill = skill
+        actorData.skillGroups = Object.entries(SKILL_CATEGORIES).map(([key, label]) =>
+            ({ label, items: skill.filter(entry => skillCategory(entry) === key) })).filter(group => group.items.length)
         actorData.drawback = drawback
     }
 
@@ -600,11 +603,21 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         const availableAttributes = Object.keys(attributes).filter(key => !isMelee || ['strength', 'dexterity'].includes(key))
         const defaultAttribute = availableAttributes.includes(saved.attribute) ? saved.attribute : isMelee ? defaultMeleeAttribute : 'dexterity'
         const defaultSkillId = skills.some(item => item.id === saved.skillId) ? saved.skillId : ''
+        const combatSkills = skills.filter(item => skillCategory(item) === 'combat')
+        const otherSkills = skills.filter(item => skillCategory(item) !== 'combat')
+        const usingOtherSkill = Boolean(defaultSkillId && skillCategory(this.actor.items.get(defaultSkillId)) !== 'combat')
         const defaultLocation = ['body', 'arms', 'legs', 'head'].includes(saved.location) ? saved.location : 'body'
         const options = availableAttributes.map(key =>
             `<option value="${escape(key)}" ${key === defaultAttribute ? 'selected' : ''}>${escape(game.i18n.localize(`AFMBE.Attributes.Primary.${key[0].toUpperCase()}${key.slice(1)}`))}</option>`
         ).join('')
-        const skillOptions = skills.map(item => `<option value="${escape(item.id)}" ${item.id === defaultSkillId ? 'selected' : ''}>${escape(item.name)} (${Number(item.system.level) || 0})</option>`).join('')
+        const combatSkillOptions = combatSkills.map(item => `<option value="${escape(item.id)}" ${item.id === defaultSkillId ? 'selected' : ''}>${escape(item.name)} (${Number(item.system.level) || 0})</option>`).join('')
+        const otherSkillOptions = Object.entries(SKILL_CATEGORIES).filter(([key]) => key !== 'combat').map(([key, label]) => {
+            const options = otherSkills.filter(item => skillCategory(item) === key)
+            return options.length ? `<optgroup label="${escape(label)}">${options.map(item =>
+                `<option value="${escape(item.id)}" ${item.id === defaultSkillId ? 'selected' : ''}>${escape(item.name)} (${Number(item.system.level) || 0})</option>`).join('')}</optgroup>` : ''
+        }).join('')
+        const getSelectedSkill = form => this.actor.items.get(form.elements.skill.value === '__other'
+            ? form.elements.otherSkill?.value : form.elements.skill.value)
         const traitOptions = type => this.actor.items.filter(item => item.type === type).map(item =>
             `<option value="${escape(item.id)}">${escape(item.name)} (${type === 'quality' ? '+' : '−'}${escape(item.system.bonus ?? 0)})</option>`).join('')
         const qualityOptions = traitOptions('quality')
@@ -631,7 +644,13 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         const firstSummary = `Target ${locationLabel} · traits ${firstTraits.total >= 0 ? '+' : ''}${firstTraits.total} · attachments ${firstAttachment.attack >= 0 ? '+' : ''}${firstAttachment.attack}${category === 'firearm' ? ` · mode ${fireMode(defaultMode, weapon).penalty}` : ''}`
         const content = `<form class="afmbe-attack-dialog">
             <div class="form-group"><label>Attribute</label><select name="attribute">${options}</select></div>
-            <div class="form-group"><label>Skill</label><select name="skill"><option value="" ${defaultSkillId ? '' : 'selected'}>None</option>${skillOptions}</select></div>
+            <div class="form-group"><label>Combat skill</label><select name="skill">
+                <option value="" ${defaultSkillId ? '' : 'selected'}>None</option>${combatSkillOptions}
+                ${otherSkills.length ? `<option value="__other" ${usingOtherSkill ? 'selected' : ''}>Other skill…</option>` : ''}
+            </select></div>
+            ${otherSkills.length ? `<div class="form-group afmbe-other-skill" ${usingOtherSkill ? '' : 'style="display:none"'}><label>Other skill</label><select name="otherSkill">
+                <option value="" ${usingOtherSkill ? '' : 'selected'}>Choose a skill</option>${otherSkillOptions}
+            </select></div>` : ''}
             ${category === 'firearm' ? `<div class="form-group"><label>Firing mode</label><select name="fireMode">${modeOptions}</select></div>` : ''}
             <p class="afmbe-attack-summary" aria-live="polite">${escape(firstSummary)}</p>
             <details ${defaultLocation !== 'body' ? 'open' : ''}><summary>Adjust attack (target, traits, modifier)</summary>
@@ -648,7 +667,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             <p>${isMelee ? 'Melee: target must be adjacent.' : `Range: ${rangeSummary}`}</p>
             ${isMelee ? `<p>Swings this action: ${meleeState.swings}/${meleeState.limit}; strain so far: ${meleeState.strain}. ${meleeState.nextAction ? `Next Offensive action requires a Constitution + skill task; Endurance ${meleeState.endurance} per swing.` : 'This action has room for another swing.'}</p>` : ''}
             <p>Offensive action: ${offensivePreview ? `used ${offensivePreview.counts.offensive}; repeat penalty ${-2 * offensivePreview.counts.offensive}` : 'outside combat (no repeat penalty)'}. Rechecked when rolled.</p>
-            ${!isMelee ? `<p>${category === 'bow' ? 'Bow' : category === 'crossbow' ? 'Crossbow' : 'Single shot attack'}: one projectile per attack. Shot ${gunState.shot} this turn; ${gunState.shotsInAction}/${gunState.rateOfFire} shots in current Offensive action; next recoil ${gunState.recoilPenalty}; action penalty ${gunState.actionPenalty}.</p>` : ''}
+            ${!isMelee ? `<p>${category === 'firearm' ? 'Trigger pull: firing mode controls rounds spent' : 'One projectile per attack'}. Shot ${gunState.shot} this turn; ${gunState.shotsInAction}/${gunState.rateOfFire} shots in current Offensive action; next recoil ${gunState.recoilPenalty}; action penalty ${gunState.actionPenalty}.</p>` : ''}
             ${hasMagazine ? `<p>Magazine: ${Number(weapon.system.capacity.value) || 0} / ${Number(weapon.system.capacity.max) || 0}</p>` : ''}
             ${attachmentPreview.items.length ? `<p>Attachments: ${attachmentPreview.items.map(item => escape(item.name)).join(', ')}; attack ${attachmentPreview.attack >= 0 ? '+' : ''}${attachmentPreview.attack} (optics apply on Perception attacks), recoil reduction ${attachmentPreview.recoil}, range +${attachmentPreview.range} m.</p>` : ''}
         </form>`
@@ -659,8 +678,10 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                 const form = html[0].querySelector('form.afmbe-attack-dialog')
                 if (!form) return
                 const refresh = () => {
+                    const otherField = form.querySelector('.afmbe-other-skill')
+                    if (otherField) otherField.style.display = form.elements.skill.value === '__other' ? '' : 'none'
                     const key = form.elements.attribute.value
-                    const skill = this.actor.items.get(form.elements.skill.value)
+                    const skill = getSelectedSkill(form)
                     const mode = category === 'firearm' ? form.elements.fireMode.value : 'semi'
                     const auto = traitRollEffects(this.actor, { kind: 'attack', weaponName: weapon.name, attribute: key,
                         skillName: skill?.name, mode })
@@ -686,7 +707,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                     const form = html[0].querySelector('form')
                     const attributeKey = form.elements.attribute.value
                     const attribute = (Number(attributes[attributeKey]?.value) || 0) + attributeBonus(this.actor, attributeKey)
-                    const skill = this.actor.items.get(form.elements.skill.value)
+                    const skill = getSelectedSkill(form)
                     const skillLevel = (Number(skill?.system.level) || 0) + skillBonus(this.actor, skill)
                     const quality = this.actor.items.get(form.elements.quality.value)
                     const drawback = this.actor.items.get(form.elements.drawback.value)

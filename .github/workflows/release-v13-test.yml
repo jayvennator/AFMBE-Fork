@@ -17,19 +17,19 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Foundry package
         run: |
-          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.31.zip" . -x '.git/*' '.github/*'
+          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.32.zip" . -x '.git/*' '.github/*'
           cp system.json "$RUNNER_TEMP/system.json"
-          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.31.zip" system.json | python3 -m json.tool >/dev/null
-          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.31.zip"
+          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.32.zip" system.json | python3 -m json.tool >/dev/null
+          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.32.zip"
           for source in modules/*.js; do node --check "$source"; done
       - name: Publish prerelease
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.2.1-test.31 \
-            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.31.zip" \
+          gh release create v1.2.1-test.32 \
+            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.32.zip" \
             "$RUNNER_TEMP/system.json" \
             --target "$GITHUB_SHA" \
-            --title "AFMBE: Left Behind V13 attack dialog test 31" \
-            --notes "Foundry V13 build 351 test. Remembers per-weapon attack choices and groups situational controls in an expandable section without changing combat calculations." \
+            --title "AFMBE: Left Behind V13 skill categories test 32" \
+            --notes "Foundry V13 build 351 test. Groups existing skills by inferred or editable category, prioritizes combat skills in attack rolls, and offers categorized other skills on demand." \
             --prerelease

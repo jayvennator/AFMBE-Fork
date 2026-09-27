@@ -1,6 +1,7 @@
 import { damageType } from './damage-types.js';
 import { CALIBERS, caliberSelection } from './calibers.js';
 import { weaponCategory, feedSystem } from './weapon-feed.js';
+import { SKILL_CATEGORIES, skillCategory } from './skill-categories.js';
 export class afmbeItemSheet extends foundry.appv1.sheets.ItemSheet {
 
     /** @override */
@@ -46,6 +47,8 @@ export class afmbeItemSheet extends foundry.appv1.sheets.ItemSheet {
         data.attachmentCategoryOptions = { firearm: 'Firearm', launcher: 'Launcher', bow: 'Bow', crossbow: 'Crossbow', melee: 'Melee', any: 'Any weapon' };
         data.skillOptions = Object.fromEntries((this.item.parent?.items ?? []).filter(item => item.type === "skill").map(item => [item.name, item.name]));
         data.selectedSkillName = this.item.system.skillName || this.item.parent?.items.get(this.item.system.skillId)?.name || "";
+        data.skillCategoryOptions = { auto: 'Auto (from skill name)', ...SKILL_CATEGORIES };
+        data.effectiveSkillCategory = SKILL_CATEGORIES[skillCategory(this.item)];
         data.isGM = game.user.isGM;
         data.editable = data.options.editable;
         const itemData = data.system;

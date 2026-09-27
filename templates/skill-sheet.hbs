@@ -13,6 +13,7 @@
                             <th>Level</th>
                             <td><input type="number" name="system.level" value="{{item.system.level}}"></td>
                         </tr>
+                        <tr><th>Category</th><td><select name="system.category">{{#selectOptions skillCategoryOptions selected=item.system.category}}{{/selectOptions}}</select><small>Current: {{effectiveSkillCategory}}. Override this for custom skills.</small></td></tr>
                     </tbody>
                 </table>
             </div>

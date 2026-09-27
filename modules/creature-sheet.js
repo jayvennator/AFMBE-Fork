@@ -1,3 +1,5 @@
+import { SKILL_CATEGORIES, skillCategory } from './skill-categories.js';
+
 export class afmbeCreatureSheet extends foundry.appv1.sheets.ActorSheet {
 
     /** @override */
@@ -88,6 +90,8 @@ export class afmbeCreatureSheet extends foundry.appv1.sheets.ActorSheet {
         actorData.weapon = weapon
         actorData.armor = armor
         actorData.skill = skill
+        actorData.skillGroups = Object.entries(SKILL_CATEGORIES).map(([key, label]) =>
+            ({ label, items: skill.filter(entry => skillCategory(entry) === key) })).filter(group => group.items.length)
         actorData.aspect = aspect
     }
 
