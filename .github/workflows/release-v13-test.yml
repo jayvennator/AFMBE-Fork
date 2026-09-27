@@ -17,18 +17,18 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Foundry package
         run: |
-          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.27.zip" . -x '.git/*' '.github/*'
+          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.28.zip" . -x '.git/*' '.github/*'
           cp system.json "$RUNNER_TEMP/system.json"
-          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.27.zip" system.json | python3 -m json.tool >/dev/null
-          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.27.zip"
+          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.28.zip" system.json | python3 -m json.tool >/dev/null
+          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.28.zip"
       - name: Publish prerelease
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.2.1-test.27 \
-            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.27.zip" \
+          gh release create v1.2.1-test.28 \
+            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.28.zip" \
             "$RUNNER_TEMP/system.json" \
             --target "$GITHUB_SHA" \
-            --title "AFMBE: Left Behind V13 automatic traits test 27" \
-            --notes "Foundry V13 build 351 test. Applies explicit Quality and Drawback roll effects automatically, stacks qualifying traits, and retains manual selectors without double counting." \
+            --title "AFMBE: Left Behind V13 armor integrity test 28" \
+            --notes "Foundry V13 build 351 test. Armor loses one integrity per absorbing hit, breaks at zero, and can be replenished with a repair consumable after a successful Help task." \
             --prerelease

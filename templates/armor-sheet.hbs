@@ -35,6 +35,7 @@
                                 <label><input type="checkbox" name="system.armor_coverage.legs" {{checked item.system.armor_coverage.legs}}>Legs</label>
                             </td>
                         </tr>
+                        <tr><th>Integrity (current / maximum)</th><td><input type="number" name="system.armor_integrity.value" min="0" step="1" value="{{item.system.armor_integrity.value}}"> / <input type="number" name="system.armor_integrity.max" min="1" step="1" value="{{item.system.armor_integrity.max}}"></td></tr>
                         <tr>
                             <th>{{localize 'AFMBE.Common.EV'}}</th>
                             <td><input type="number" name="system.encumbrance" value="{{item.system.encumbrance}}"></td>

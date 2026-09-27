@@ -9,6 +9,7 @@
                 <th class="table-left-align">{{localize 'AFMBE.Common.Name'}}</th>
                 <th>{{localize 'AFMBE.Common.Quantity'}}</th>
                 <th>{{localize 'AFMBE.Common.ArmorValue'}}</th>
+                <th>Integrity</th>
                 <th>{{localize 'AFMBE.Common.EV'}}</th>
                 <th></th>
             </tr>
@@ -26,6 +27,7 @@
                 <td class="table-center-align armor-button-cell">
                     <button type="button">{{item.system.armor_value}}</button>
                 </td>
+                <td class="table-center-align">{{item.system.armor_integrity.value}} / {{item.system.armor_integrity.max}} <button type="button" class="replenish-armor" title="Replenish armor (Help action)">Repair</button></td>
                 <td class="table-center-align">{{item.system.encumbrance}}</td>
                 <td class="table-center-align"><a class="item-control item-delete" title="{{localize 'AFMBE.Items.Delete'}}"><i
                             class="fas fa-trash"></i></a></td>

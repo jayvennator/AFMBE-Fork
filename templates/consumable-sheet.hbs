@@ -3,6 +3,7 @@
 <section class="description-container"><div class="item-attribute-sidebar"><h2>Consumable effects</h2><table><tbody>
 <tr><th>Quantity</th><td><input type="number" name="system.qty" min="0" step="1" value="{{item.system.qty}}"></td></tr>
 <tr><th>HP restored</th><td><input type="number" name="system.healing" min="0" step="1" value="{{item.system.healing}}"></td></tr>
+<tr><th>Armor integrity restored (Help task)</th><td><input type="number" name="system.armorRestoration" min="0" step="1" value="{{item.system.armorRestoration}}"></td></tr>
 <tr><th>Bonus</th><td><input type="number" name="system.bonus" step="1" value="{{item.system.bonus}}"></td></tr>
 <tr><th>Attribute</th><td><select name="system.attribute"><option value="">None (use skill below)</option>{{#selectOptions attributeOptions selected=item.system.attribute}}{{/selectOptions}}</select></td></tr>
 {{#if hasActor}}<tr><th>Skill</th><td><select name="system.skillName"><option value="">None</option>{{#selectOptions skillOptions selected=selectedSkillName}}{{/selectOptions}}</select></td></tr>{{else}}<tr><th>Skill name</th><td><input type="text" name="system.skillName" value="{{item.system.skillName}}" placeholder="Exact skill name on the character"></td></tr>{{/if}}

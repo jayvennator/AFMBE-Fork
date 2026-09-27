@@ -34,6 +34,7 @@
                                 <label><input type="checkbox" name="system.armor_coverage.legs" {{checked item.system.armor_coverage.legs}}>Legs</label>
                             </td>
                         </tr>
+                        <tr><th>Armor integrity (current / maximum)</th><td><input type="number" name="system.armor_integrity.value" min="0" step="1" value="{{item.system.armor_integrity.value}}"> / <input type="number" name="system.armor_integrity.max" min="1" step="1" value="{{item.system.armor_integrity.max}}"></td></tr>
                         {{#if item.isEmbedded}}
                         <tr><th>Item type</th><td><button type="button" class="convert-to-armor">Convert to Armor</button></td></tr>
                         {{/if}}

@@ -337,6 +337,7 @@
             ],
             "equipped": false,
             "armor_value": "0",
+            "armor_integrity": { "value": 10, "max": 10 },
             "armor_coverage": {
                 "body": true,
                 "head": false,
@@ -351,6 +352,7 @@
             ],
             "equipped": false,
             "armor_value": "0",
+            "armor_integrity": { "value": 10, "max": 10 },
             "armor_coverage": {
                 "body": true,
                 "head": false,
@@ -371,6 +373,7 @@
             ],
             "qty": 1,
             "healing": 0,
+            "armorRestoration": 0,
             "attribute": "",
             "skillId": "",
             "bonus": 0,
