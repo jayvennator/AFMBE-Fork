@@ -655,6 +655,22 @@
     line-height: 10px;
 }
 
+.afmbe-left-behind .afmbe-attack-dialog .afmbe-attack-summary {
+    font-weight: 600;
+    margin: 0.5rem 0;
+}
+
+.afmbe-left-behind .afmbe-attack-dialog details {
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    padding: 0.4rem;
+    margin-bottom: 0.6rem;
+}
+
+.afmbe-left-behind .afmbe-attack-dialog details summary {
+    cursor: pointer;
+}
+
 /* ------------------------------------------- 
         Item Sheets
  ---------------------------------------------*/

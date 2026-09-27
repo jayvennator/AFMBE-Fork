@@ -596,10 +596,15 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         const escape = value => foundry.utils.escapeHTML(String(value ?? ''))
         const isMelee = isMeleeAttack(weapon)
         const defaultMeleeAttribute = meleeAttribute(weapon)
-        const options = Object.keys(attributes).filter(key => !isMelee || ['strength', 'dexterity'].includes(key)).map(key =>
-            `<option value="${escape(key)}" ${isMelee && key === defaultMeleeAttribute ? 'selected' : ''}>${escape(game.i18n.localize(`AFMBE.Attributes.Primary.${key[0].toUpperCase()}${key.slice(1)}`))}</option>`
+        const saved = this.actor.getFlag('afmbe-left-behind', 'attackDefaults')?.[weapon.id] ?? {}
+        const availableAttributes = Object.keys(attributes).filter(key => !isMelee || ['strength', 'dexterity'].includes(key))
+        const defaultAttribute = availableAttributes.includes(saved.attribute) ? saved.attribute : isMelee ? defaultMeleeAttribute : 'dexterity'
+        const defaultSkillId = skills.some(item => item.id === saved.skillId) ? saved.skillId : ''
+        const defaultLocation = ['body', 'arms', 'legs', 'head'].includes(saved.location) ? saved.location : 'body'
+        const options = availableAttributes.map(key =>
+            `<option value="${escape(key)}" ${key === defaultAttribute ? 'selected' : ''}>${escape(game.i18n.localize(`AFMBE.Attributes.Primary.${key[0].toUpperCase()}${key.slice(1)}`))}</option>`
         ).join('')
-        const skillOptions = skills.map(item => `<option value="${escape(item.id)}">${escape(item.name)} (${Number(item.system.level) || 0})</option>`).join('')
+        const skillOptions = skills.map(item => `<option value="${escape(item.id)}" ${item.id === defaultSkillId ? 'selected' : ''}>${escape(item.name)} (${Number(item.system.level) || 0})</option>`).join('')
         const traitOptions = type => this.actor.items.filter(item => item.type === type).map(item =>
             `<option value="${escape(item.id)}">${escape(item.name)} (${type === 'quality' ? '+' : '−'}${escape(item.system.bonus ?? 0)})</option>`).join('')
         const qualityOptions = traitOptions('quality')
@@ -609,23 +614,37 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         const magazineMode = !isMelee && (feed === "detachable" || (feed === "legacy" && Boolean(weapon.system.usesMagazines)))
         const hasMagazine = !isMelee && feed !== "direct" && (magazineMode || ["internal", "cylinder", "single"].includes(feed) || Number(weapon.system.capacity?.max) > 0)
         const gunState = !isMelee ? gunPreview(this.actor, weapon) : null
-        const modeOptions = allowedFireModes(weapon).map(mode => `<option value="${mode}">${mode === 'semi' ? 'Semi-auto (1 round)' : mode === 'burst' ? `Burst (${fireMode(mode, weapon).rounds} rounds; −3)` : 'Automatic (10 rounds; −4)'}</option>`).join('')
+        const modes = allowedFireModes(weapon)
+        const defaultMode = modes.includes(saved.fireMode) ? saved.fireMode : modes[0]
+        const modeOptions = modes.map(mode => `<option value="${mode}" ${mode === defaultMode ? 'selected' : ''}>${mode === 'semi' ? 'Semi-auto (1 round)' : mode === 'burst' ? `Burst (${fireMode(mode, weapon).rounds} rounds; −3)` : 'Automatic (10 rounds; −4)'}</option>`).join('')
         const offensivePreview = actionState(this.actor)
         const rangePreview = isMelee ? { penalty: 0, note: "Melee range: target must be adjacent." } : measureWeaponRange(this.actor, weapon)
         const attachmentPreview = attachmentModifiers(this.actor, weapon)
         const meleeState = isMelee ? meleePreview(this.actor, weapon) : null
         const rangeSummary = rangePreview.error || rangePreview.note ? escape(rangePreview.error || rangePreview.note) :
             `${escape(rangePreview.targetName)}: ${rangePreview.distance.toFixed(1)} m; normal range ${rangePreview.normalRange} m; penalty ${rangePreview.penalty} (${escape(rangePreview.sceneScale)})`
+        const firstSkill = this.actor.items.get(defaultSkillId)
+        const firstTraits = traitRollEffects(this.actor, { kind: 'attack', weaponName: weapon.name, attribute: defaultAttribute,
+            skillName: firstSkill?.name, mode: category === 'firearm' ? defaultMode : 'semi' })
+        const firstAttachment = attachmentModifiers(this.actor, weapon, { aimed: defaultAttribute === 'perception' })
+        const locationLabel = { body: 'Body (0)', arms: 'Arm (-2)', legs: 'Leg (-2)', head: 'Head (-4)' }[defaultLocation]
+        const firstSummary = `Target ${locationLabel} · traits ${firstTraits.total >= 0 ? '+' : ''}${firstTraits.total} · attachments ${firstAttachment.attack >= 0 ? '+' : ''}${firstAttachment.attack}${category === 'firearm' ? ` · mode ${fireMode(defaultMode, weapon).penalty}` : ''}`
         const content = `<form class="afmbe-attack-dialog">
             <div class="form-group"><label>Attribute</label><select name="attribute">${options}</select></div>
-            <div class="form-group"><label>Skill</label><select name="skill"><option value="">None</option>${skillOptions}</select></div>
-            <div class="form-group"><label>Quality</label><select name="quality"><option value="">None</option>${qualityOptions}</select></div>
-            <div class="form-group"><label>Drawback</label><select name="drawback"><option value="">None</option>${drawbackOptions}</select></div>
+            <div class="form-group"><label>Skill</label><select name="skill"><option value="" ${defaultSkillId ? '' : 'selected'}>None</option>${skillOptions}</select></div>
             ${category === 'firearm' ? `<div class="form-group"><label>Firing mode</label><select name="fireMode">${modeOptions}</select></div>` : ''}
-            <div class="form-group"><label>Aimed location</label><select name="location">
-                <option value="body">Body (0)</option><option value="arms">Arm (-2)</option><option value="legs">Leg (-2)</option><option value="head">Head (-4)</option>
-            </select></div>
-            <div class="form-group"><label>Other modifier</label><input type="number" name="modifier" value="0" step="1"></div>
+            <p class="afmbe-attack-summary" aria-live="polite">${escape(firstSummary)}</p>
+            <details ${defaultLocation !== 'body' ? 'open' : ''}><summary>Adjust attack (target, traits, modifier)</summary>
+                <div class="form-group"><label>Aimed location</label><select name="location">
+                    <option value="body" ${defaultLocation === 'body' ? 'selected' : ''}>Body (0)</option>
+                    <option value="arms" ${defaultLocation === 'arms' ? 'selected' : ''}>Arm (-2)</option>
+                    <option value="legs" ${defaultLocation === 'legs' ? 'selected' : ''}>Leg (-2)</option>
+                    <option value="head" ${defaultLocation === 'head' ? 'selected' : ''}>Head (-4)</option>
+                </select></div>
+                <div class="form-group"><label>Quality</label><select name="quality"><option value="">None</option>${qualityOptions}</select></div>
+                <div class="form-group"><label>Drawback</label><select name="drawback"><option value="">None</option>${drawbackOptions}</select></div>
+                <div class="form-group"><label>Other modifier</label><input type="number" name="modifier" value="0" step="1"></div>
+            </details>
             <p>${isMelee ? 'Melee: target must be adjacent.' : `Range: ${rangeSummary}`}</p>
             ${isMelee ? `<p>Swings this action: ${meleeState.swings}/${meleeState.limit}; strain so far: ${meleeState.strain}. ${meleeState.nextAction ? `Next Offensive action requires a Constitution + skill task; Endurance ${meleeState.endurance} per swing.` : 'This action has room for another swing.'}</p>` : ''}
             <p>Offensive action: ${offensivePreview ? `used ${offensivePreview.counts.offensive}; repeat penalty ${-2 * offensivePreview.counts.offensive}` : 'outside combat (no repeat penalty)'}. Rechecked when rolled.</p>
@@ -636,6 +655,31 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         new Dialog({
             title: `Attack: ${weapon.name}`,
             content,
+            render: html => {
+                const form = html[0].querySelector('form.afmbe-attack-dialog')
+                if (!form) return
+                const refresh = () => {
+                    const key = form.elements.attribute.value
+                    const skill = this.actor.items.get(form.elements.skill.value)
+                    const mode = category === 'firearm' ? form.elements.fireMode.value : 'semi'
+                    const auto = traitRollEffects(this.actor, { kind: 'attack', weaponName: weapon.name, attribute: key,
+                        skillName: skill?.name, mode })
+                    const quality = this.actor.items.get(form.elements.quality.value)
+                    const drawback = this.actor.items.get(form.elements.drawback.value)
+                    const attachments = attachmentModifiers(this.actor, weapon, { aimed: key === 'perception' })
+                    const manual = manualTraitValue(quality, auto) + manualTraitValue(drawback, auto)
+                    const location = form.elements.location.selectedOptions[0]?.textContent ?? 'Body (0)'
+                    const other = Number(form.elements.modifier.value) || 0
+                    const parts = [`Target ${location}`, `traits ${auto.total + manual >= 0 ? '+' : ''}${auto.total + manual}`,
+                        `attachments ${attachments.attack >= 0 ? '+' : ''}${attachments.attack}`]
+                    if (category === 'firearm') parts.push(`mode ${fireMode(mode, weapon).penalty}`)
+                    if (other) parts.push(`other ${other > 0 ? '+' : ''}${other}`)
+                    form.querySelector('.afmbe-attack-summary').textContent = parts.join(' · ')
+                }
+                form.addEventListener('change', refresh)
+                form.addEventListener('input', refresh)
+                refresh()
+            },
             buttons: {
                 cancel: { label: 'Cancel' },
                 attack: { label: 'Roll attack', callback: async html => {
@@ -722,6 +766,11 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                             weaponUuid: weapon.uuid, weaponName: weapon.name, damageType: firedDamageType, total, location: hitLocation,
                             melee: isMelee, roundsFired: firing.rounds, hits, firingMode: firing.mode, status: success ? 'pending' : 'miss', blocked: false
                         } } } })
+                    try {
+                        const previous = this.actor.getFlag('afmbe-left-behind', 'attackDefaults') ?? {}
+                        await this.actor.setFlag('afmbe-left-behind', 'attackDefaults', { ...previous,
+                            [weapon.id]: { attribute: attributeKey, skillId: skill?.id ?? '', fireMode: firing.mode, location: hitLocation } })
+                    } catch (error) { console.warn('AFMBE could not save weapon attack defaults', error) }
                 } }
             },
             default: 'attack'
