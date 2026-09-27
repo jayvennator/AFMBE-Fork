@@ -590,6 +590,10 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             `<option value="${escape(key)}" ${isMelee && key === defaultMeleeAttribute ? 'selected' : ''}>${escape(game.i18n.localize(`AFMBE.Attributes.Primary.${key[0].toUpperCase()}${key.slice(1)}`))}</option>`
         ).join('')
         const skillOptions = skills.map(item => `<option value="${escape(item.id)}">${escape(item.name)} (${Number(item.system.level) || 0})</option>`).join('')
+        const traitOptions = type => this.actor.items.filter(item => item.type === type).map(item =>
+            `<option value="${escape(item.id)}">${escape(item.name)} (${type === 'quality' ? '+' : '−'}${escape(item.system.bonus ?? 0)})</option>`).join('')
+        const qualityOptions = traitOptions('quality')
+        const drawbackOptions = traitOptions('drawback')
         const category = weaponCategory(weapon)
         const feed = feedSystem(weapon)
         const magazineMode = !isMelee && (feed === "detachable" || (feed === "legacy" && Boolean(weapon.system.usesMagazines)))
@@ -604,6 +608,8 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         const content = `<form class="afmbe-attack-dialog">
             <div class="form-group"><label>Attribute</label><select name="attribute">${options}</select></div>
             <div class="form-group"><label>Skill</label><select name="skill"><option value="">None</option>${skillOptions}</select></div>
+            <div class="form-group"><label>Quality</label><select name="quality"><option value="">None</option>${qualityOptions}</select></div>
+            <div class="form-group"><label>Drawback</label><select name="drawback"><option value="">None</option>${drawbackOptions}</select></div>
             ${category === 'firearm' ? `<div class="form-group"><label>Firing mode</label><select name="fireMode">${modeOptions}</select></div>` : ''}
             <div class="form-group"><label>Aimed location</label><select name="location">
                 <option value="body">Body (0)</option><option value="arms">Arm (-2)</option><option value="legs">Leg (-2)</option><option value="head">Head (-4)</option>
@@ -626,6 +632,12 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                     const attribute = (Number(attributes[attributeKey]?.value) || 0) + attributeBonus(this.actor, attributeKey)
                     const skill = this.actor.items.get(form.elements.skill.value)
                     const skillLevel = (Number(skill?.system.level) || 0) + skillBonus(this.actor, skill)
+                    const quality = this.actor.items.get(form.elements.quality.value)
+                    const drawback = this.actor.items.get(form.elements.drawback.value)
+                    if ((quality && quality.type !== 'quality') || (drawback && drawback.type !== 'drawback')) { ui.notifications.warn('Choose a valid Quality and Drawback.'); return }
+                    const qualityBonus = quality ? Number(quality.system.bonus) : 0
+                    const drawbackPenalty = drawback ? Number(drawback.system.bonus) : 0
+                    if (!Number.isFinite(qualityBonus) || !Number.isFinite(drawbackPenalty)) { ui.notifications.warn('Selected Quality or Drawback has an invalid bonus.'); return }
                     const hitLocation = form.elements.location.value
                     const location = hitLocation === 'head' ? -4 : ['arms', 'legs'].includes(hitLocation) ? -2 : 0
                     const modifier = Number(form.elements.modifier.value) || 0
@@ -679,14 +691,14 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                     } else if (hasMagazine) await weapon.update({ 'system.capacity.value': remaining - shots })
                     const roll = await new Roll('1d10').evaluate()
                     const ammoHitBonus = isMelee ? 1 : hitBonus(firedDamageType)
-                    const total = roll.total + attribute + skillLevel + location + modifier + ammoHitBonus + range.penalty + action.penalty + firing.penalty + (meleeStrike?.strainPenalty ?? gunShot?.recoilPenalty ?? 0)
+                    const total = roll.total + attribute + skillLevel + location + modifier + qualityBonus - drawbackPenalty + ammoHitBonus + range.penalty + action.penalty + firing.penalty + (meleeStrike?.strainPenalty ?? gunShot?.recoilPenalty ?? 0)
                     const success = total >= 9
                     const degrees = success ? Math.floor((total - 9) / 2) + 1 : 0
                     const hits = success ? volleyHits(firing.mode, total, firing.rounds) : 0
                     const locationName = form.elements.location.selectedOptions[0].textContent
                     const ammoNote = feed === 'direct' ? `<p>1 ${escape(looseProjectile.name)} used; ${looseProjectile.system.qty} remain.</p>` : hasMagazine ? `<p>${firing.rounds} ${escape(firedDamageType)} round(s) fired; ${weapon.system.capacity.value}/${weapon.system.capacity.max} remaining.</p>` : ''
                     const rangeDetail = isMelee ? `melee swing ${meleeStrike.swing}/${meleePreview(this.actor, weapon).limit}; strain ${meleeStrike.strainPenalty}; Endurance spent ${meleeStrike.enduranceSpent}` : `shot ${gunShot.shot} this turn (${gunShot.shotsInAction}/${gunShot.rateOfFire} this action), recoil ${gunShot.recoilPenalty}; ` + (range.note ? 'range unconfigured (0)' : `range ${range.penalty} (${range.distance.toFixed(1)} m / ${range.normalRange} m)` )
-                    const content = `<h2>${escape(weapon.name)}</h2><div class="afmbe-roll-kind">Attack</div><p>${escape(attributeKey)} ${attribute}, ${escape(skill?.name ?? 'No skill')} ${skillLevel}, ${escape(locationName)}, modifier ${modifier}, ${isMelee ? 'melee' : 'ammo'} ${ammoHitBonus >= 0 ? "+" : ""}${ammoHitBonus}, ${rangeDetail}, mode ${firing.mode} ${firing.penalty}, action ${action.penalty}</p><p>Roll ${roll.total} + modifiers = <strong>${total}</strong> vs 9 — <strong>${success ? `Hit (${degrees} degree${degrees === 1 ? '' : 's'}; ${hits} of ${firing.rounds} rounds hit)` : 'Miss'}</strong></p>${ammoNote}`
+                    const content = `<h2>${escape(weapon.name)}</h2><div class="afmbe-roll-kind">Attack</div><p>${escape(attributeKey)} ${attribute}, ${escape(skill?.name ?? 'No skill')} ${skillLevel}, ${escape(locationName)}, modifier ${modifier}, Quality ${escape(quality?.name ?? 'None')} ${qualityBonus >= 0 ? '+' : ''}${qualityBonus}, Drawback ${escape(drawback?.name ?? 'None')} ${-drawbackPenalty >= 0 ? '+' : ''}${-drawbackPenalty}, ${isMelee ? 'melee' : 'ammo'} ${ammoHitBonus >= 0 ? "+" : ""}${ammoHitBonus}, ${rangeDetail}, mode ${firing.mode} ${firing.penalty}, action ${action.penalty}</p><p>Roll ${roll.total} + modifiers = <strong>${total}</strong> vs 9 — <strong>${success ? `Hit (${degrees} degree${degrees === 1 ? '' : 's'}; ${hits} of ${firing.rounds} rounds hit)` : 'Miss'}</strong></p>${ammoNote}`
                     await ChatMessage.create({ user: game.user.id, speaker: ChatMessage.getSpeaker({ actor: this.actor }),
                         content: content + `<p>${success ? `Awaiting ${escape(target.name)}’s defense.` : 'Attack misses; no damage roll.'}</p>`, rolls: [roll],
                         flags: { 'afmbe-left-behind': { pendingAttack: {
