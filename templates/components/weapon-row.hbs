@@ -2,6 +2,7 @@
                 <td>
                     <div class="item-name-flex-container">
                         <button type="button" class="attack-roll" title="Roll attack">Attack</button>
+                        <button type="button" class="install-attachment" title="Install a compatible attachment (Help task)">Attach</button>
                         {{#unless item.isMeleeWeapon}}
                         {{#unless item.isBow}}<button type="button" class="reload-weapon" title="Load ammunition; spends a Help action in combat">Reload</button>{{/unless}}
                         {{#if item.hasInsertedMagazine}}<button type="button" class="remove-magazine" title="Remove inserted magazine without discarding its rounds">Remove mag</button>{{/if}}

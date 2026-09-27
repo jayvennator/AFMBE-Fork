@@ -1,3 +1,4 @@
+import { attachmentModifiers } from './attachments.js';
 /** Straight-line centre-to-centre distance; scene units are converted to meters. */
 export function rangePenalty(distanceMeters, normalRangeMeters, penaltyPerBand = 2) {
     if (!Number.isFinite(distanceMeters) || distanceMeters < 0 || !Number.isFinite(normalRangeMeters) || normalRangeMeters <= 0 ||
@@ -10,7 +11,7 @@ export function measureWeaponRange(actor, weapon, canvasView = canvas, targets =
     const rawRange = weapon.system.range;
     if (rawRange === '' || rawRange === null || rawRange === undefined || Number(rawRange) === 0)
         return { distance: null, penalty: 0, note: 'No weapon range configured; no automatic range penalty.' };
-    const normalRange = Number(rawRange);
+    const normalRange = Number(rawRange) + attachmentModifiers(actor, weapon).range;
     if (!Number.isFinite(normalRange) || normalRange < 0) return { error: 'Set a positive numeric range (meters) on this weapon.' };
     const step = Number(weapon.system.rangePenaltyStep ?? 2);
     if (!Number.isInteger(step) || step < 0 || step > 20) return { error: 'Range penalty per band must be a whole number from 0 to 20.' };

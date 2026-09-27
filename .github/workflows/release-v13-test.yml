@@ -17,19 +17,19 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Foundry package
         run: |
-          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.29.zip" . -x '.git/*' '.github/*'
+          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.30.zip" . -x '.git/*' '.github/*'
           cp system.json "$RUNNER_TEMP/system.json"
-          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.29.zip" system.json | python3 -m json.tool >/dev/null
-          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.29.zip"
-          node --check modules/actor-sheet.js
+          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.30.zip" system.json | python3 -m json.tool >/dev/null
+          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.30.zip"
+          for source in modules/*.js; do node --check "$source"; done
       - name: Publish prerelease
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.2.1-test.29 \
-            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.29.zip" \
+          gh release create v1.2.1-test.30 \
+            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.30.zip" \
             "$RUNNER_TEMP/system.json" \
             --target "$GITHUB_SHA" \
-            --title "AFMBE: Left Behind V13 armor integrity test 29" \
-            --notes "Foundry V13 build 351 test. Repairs a corrupted actor-sheet.js in test.28; retains armor integrity and Help task replenishment." \
+            --title "AFMBE: Left Behind V13 attachments test 30" \
+            --notes "Foundry V13 build 351 test. Adds installable weapon attachments with Help rolls, slot limits, and bounded attack, recoil and range effects." \
             --prerelease

@@ -1,4 +1,5 @@
 import { actionState, spendAction } from './action-economy.js';
+import { attachmentModifiers } from './attachments.js';
 const SYSTEM_ID = 'afmbe-left-behind';
 const locks = new Set();
 
@@ -8,7 +9,8 @@ export function rateOfFire(weapon) {
 }
 export function recoilPerShot(weapon) {
     const value = Number(weapon.system.recoil ?? 0);
-    return Number.isSafeInteger(value) && value >= 0 ? Math.min(value, 20) : 0;
+    const base = Number.isSafeInteger(value) && value >= 0 ? Math.min(value, 20) : 0;
+    return Math.max(0, base - attachmentModifiers(weapon.parent, weapon).recoil);
 }
 export function recoilPenaltyForShot(shot, weapon) {
     return shot <= 1 ? 0 : -(shot - 1) * recoilPerShot(weapon);

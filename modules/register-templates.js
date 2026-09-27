@@ -19,6 +19,7 @@ export function registerTemplates() {
         "systems/afmbe-left-behind/templates/components/weapon-row.hbs",
         "systems/afmbe-left-behind/templates/components/ammunition.hbs",
         "systems/afmbe-left-behind/templates/components/armor.hbs",
+        "systems/afmbe-left-behind/templates/components/attachments.hbs",
         "systems/afmbe-left-behind/templates/components/qualities.hbs",
         "systems/afmbe-left-behind/templates/components/item-attribute-sidebar.hbs",
         "systems/afmbe-left-behind/templates/components/item-sheet-header.hbs",

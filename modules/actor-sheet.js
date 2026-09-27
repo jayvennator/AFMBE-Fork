@@ -11,6 +11,7 @@ import { activeBonuses, attributeBonus, skillBonus, useConsumable, endConsumable
 import { postArmorRoll } from './armor-damage.js';
 import { promptArmorReplenishment } from './armor-replenishment.js';
 import { armorIntegrity } from './armor-integrity.js';
+import { attachmentModifiers, promptInstallAttachment, removeAttachment } from './attachments.js';
 import { loadedMagazine, compatibleMagazines, reloadWeapon, loadMagazine } from './magazines.js';
 
 export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
@@ -54,6 +55,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         const item = [];
         const equippedItem = [];
         const armor = [];
+        const attachment = [];
         const consumable = [];
         const weapon = [];
         const magazine = [];
@@ -96,6 +98,10 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                 case "armor":
                     armor.push(i)
                     break
+                case "attachment":
+                    i.installedWeaponName = sheetData.items.find(weapon => (weapon.id ?? weapon._id) === i.system.installedWeaponId)?.name ?? '';
+                    attachment.push(i)
+                    break
 
                 case "power":
                     power.push(i)
@@ -116,7 +122,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         }
 
         // Alphabetically sort all items
-        const itemCats = [item, equippedItem, weapon, armor, consumable, magazine, ammunition, power, quality, skill, drawback]
+        const itemCats = [item, equippedItem, weapon, armor, attachment, consumable, magazine, ammunition, power, quality, skill, drawback]
         for (let category of itemCats) {
             if (category.length > 1) {
                 category.sort((a, b) => {
@@ -139,6 +145,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         actorData.magazine = magazine
         actorData.ammunition = ammunition
         actorData.armor = armor
+        actorData.attachment = attachment
         actorData.consumable = consumable
         actorData.actionEconomy = actionPanel(this.actor)
         actorData.activeConsumables = activeBonuses(this.actor).map(effect => ({ ...effect, willCrash: effect.phase !== "crash" && Number(effect.crashPenalty) > 0 && Number(effect.crashDuration) > 0 }))
@@ -166,6 +173,11 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         html.find('.attribute-roll').click(this._onAttributeRoll.bind(this))
         html.find('.attack-roll').click(this._onAttackRoll.bind(this))
         html.find('.reload-weapon').click(this._onReloadWeapon.bind(this))
+        html.find('.install-attachment').click(event => promptInstallAttachment(this.actor, this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)))
+        html.find('.remove-attachment').click(async event => {
+            try { await removeAttachment(this.actor, this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)); }
+            catch (error) { console.error('AFMBE attachment removal failed', error); ui.notifications.error(error.message); }
+        })
         html.find('.unload-weapon').click(this._onUnloadWeapon.bind(this))
         html.find('.remove-magazine').click(async event => {
             const weapon = this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId);
@@ -600,6 +612,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         const modeOptions = allowedFireModes(weapon).map(mode => `<option value="${mode}">${mode === 'semi' ? 'Semi-auto (1 round)' : mode === 'burst' ? `Burst (${fireMode(mode, weapon).rounds} rounds; −3)` : 'Automatic (10 rounds; −4)'}</option>`).join('')
         const offensivePreview = actionState(this.actor)
         const rangePreview = isMelee ? { penalty: 0, note: "Melee range: target must be adjacent." } : measureWeaponRange(this.actor, weapon)
+        const attachmentPreview = attachmentModifiers(this.actor, weapon)
         const meleeState = isMelee ? meleePreview(this.actor, weapon) : null
         const rangeSummary = rangePreview.error || rangePreview.note ? escape(rangePreview.error || rangePreview.note) :
             `${escape(rangePreview.targetName)}: ${rangePreview.distance.toFixed(1)} m; normal range ${rangePreview.normalRange} m; penalty ${rangePreview.penalty} (${escape(rangePreview.sceneScale)})`
@@ -618,6 +631,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             <p>Offensive action: ${offensivePreview ? `used ${offensivePreview.counts.offensive}; repeat penalty ${-2 * offensivePreview.counts.offensive}` : 'outside combat (no repeat penalty)'}. Rechecked when rolled.</p>
             ${!isMelee ? `<p>${category === 'bow' ? 'Bow' : category === 'crossbow' ? 'Crossbow' : 'Single shot attack'}: one projectile per attack. Shot ${gunState.shot} this turn; ${gunState.shotsInAction}/${gunState.rateOfFire} shots in current Offensive action; next recoil ${gunState.recoilPenalty}; action penalty ${gunState.actionPenalty}.</p>` : ''}
             ${hasMagazine ? `<p>Magazine: ${Number(weapon.system.capacity.value) || 0} / ${Number(weapon.system.capacity.max) || 0}</p>` : ''}
+            ${attachmentPreview.items.length ? `<p>Attachments: ${attachmentPreview.items.map(item => escape(item.name)).join(', ')}; attack ${attachmentPreview.attack >= 0 ? '+' : ''}${attachmentPreview.attack} (optics apply on Perception attacks), recoil reduction ${attachmentPreview.recoil}, range +${attachmentPreview.range} m.</p>` : ''}
         </form>`
         new Dialog({
             title: `Attack: ${weapon.name}`,
@@ -663,6 +677,8 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                     const firing = fireMode(selectedMode, weapon)
                     const automatic = traitRollEffects(this.actor, { kind: 'attack', weaponName: weapon.name, attribute: attributeKey,
                         skillName: skill?.name, mode: firing.mode })
+                    // Perception is the rulebook's aimed-fire attribute; optics only add attack accuracy then.
+                    const attachments = attachmentModifiers(this.actor, weapon, { aimed: attributeKey === 'perception' })
                     const qualityBonus = manualTraitValue(quality, automatic)
                     const drawbackBonus = manualTraitValue(drawback, automatic)
                     if (firing.mode !== 'semi' && ['single', 'cylinder'].includes(feed) && Number(weapon.system.capacity?.max) < firing.rounds) { ui.notifications.warn('This weapon cannot hold enough rounds for that firing mode.'); return }
@@ -691,14 +707,14 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                     } else if (hasMagazine) await weapon.update({ 'system.capacity.value': remaining - shots })
                     const roll = await new Roll('1d10').evaluate()
                     const ammoHitBonus = isMelee ? 1 : hitBonus(firedDamageType)
-                    const total = roll.total + attribute + skillLevel + location + modifier + automatic.total + qualityBonus + drawbackBonus + ammoHitBonus + range.penalty + action.penalty + firing.penalty + (meleeStrike?.strainPenalty ?? gunShot?.recoilPenalty ?? 0)
+                    const total = roll.total + attribute + skillLevel + location + modifier + automatic.total + qualityBonus + drawbackBonus + ammoHitBonus + range.penalty + action.penalty + firing.penalty + attachments.attack + (meleeStrike?.strainPenalty ?? gunShot?.recoilPenalty ?? 0)
                     const success = total >= 9
                     const degrees = success ? Math.floor((total - 9) / 2) + 1 : 0
                     const hits = success ? volleyHits(firing.mode, total, firing.rounds) : 0
                     const locationName = form.elements.location.selectedOptions[0].textContent
                     const ammoNote = feed === 'direct' ? `<p>1 ${escape(looseProjectile.name)} used; ${looseProjectile.system.qty} remain.</p>` : hasMagazine ? `<p>${firing.rounds} ${escape(firedDamageType)} round(s) fired; ${weapon.system.capacity.value}/${weapon.system.capacity.max} remaining.</p>` : ''
                     const rangeDetail = isMelee ? `melee swing ${meleeStrike.swing}/${meleePreview(this.actor, weapon).limit}; strain ${meleeStrike.strainPenalty}; Endurance spent ${meleeStrike.enduranceSpent}` : `shot ${gunShot.shot} this turn (${gunShot.shotsInAction}/${gunShot.rateOfFire} this action), recoil ${gunShot.recoilPenalty}; ` + (range.note ? 'range unconfigured (0)' : `range ${range.penalty} (${range.distance.toFixed(1)} m / ${range.normalRange} m)` )
-                    const content = `<h2>${escape(weapon.name)}</h2><div class="afmbe-roll-kind">Attack</div><p>${escape(attributeKey)} ${attribute}, ${escape(skill?.name ?? 'No skill')} ${skillLevel}, ${escape(locationName)}, modifier ${modifier}, traits ${traitSummary(automatic, quality, drawback, escape)}, ${isMelee ? 'melee' : 'ammo'} ${ammoHitBonus >= 0 ? "+" : ""}${ammoHitBonus}, ${rangeDetail}, mode ${firing.mode} ${firing.penalty}, action ${action.penalty}</p><p>Roll ${roll.total} + modifiers = <strong>${total}</strong> vs 9 — <strong>${success ? `Hit (${degrees} degree${degrees === 1 ? '' : 's'}; ${hits} of ${firing.rounds} rounds hit)` : 'Miss'}</strong></p>${ammoNote}`
+                    const content = `<h2>${escape(weapon.name)}</h2><div class="afmbe-roll-kind">Attack</div><p>${escape(attributeKey)} ${attribute}, ${escape(skill?.name ?? 'No skill')} ${skillLevel}, ${escape(locationName)}, modifier ${modifier}, traits ${traitSummary(automatic, quality, drawback, escape)}, ${isMelee ? 'melee' : 'ammo'} ${ammoHitBonus >= 0 ? "+" : ""}${ammoHitBonus}, attachments ${attachments.attack >= 0 ? '+' : ''}${attachments.attack}${attachments.items.length ? ` (${attachments.items.map(item => escape(item.name)).join(', ')})` : ''}, ${rangeDetail}, mode ${firing.mode} ${firing.penalty}, action ${action.penalty}</p><p>Roll ${roll.total} + modifiers = <strong>${total}</strong> vs 9 — <strong>${success ? `Hit (${degrees} degree${degrees === 1 ? '' : 's'}; ${hits} of ${firing.rounds} rounds hit)` : 'Miss'}</strong></p>${ammoNote}`
                     await ChatMessage.create({ user: game.user.id, speaker: ChatMessage.getSpeaker({ actor: this.actor }),
                         content: content + `<p>${success ? `Awaiting ${escape(target.name)}’s defense.` : 'Attack misses; no damage roll.'}</p>`, rolls: [roll],
                         flags: { 'afmbe-left-behind': { pendingAttack: {

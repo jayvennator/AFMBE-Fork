@@ -100,6 +100,7 @@
     "AFMBE.Item.Attributes.Title": "Attributes",
     "AFMBE.Armor.Title": "Armor",
     "AFMBE.ItemType.armor": "Armor",
+    "AFMBE.ItemType.attachment": "Attachment",
     "AFMBE.ItemType.aspect": "Aspect",
     "AFMBE.ItemType.drawback": "Drawback",
     "AFMBE.ItemType.item": "Item",

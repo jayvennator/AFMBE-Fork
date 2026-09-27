@@ -42,6 +42,8 @@ export class afmbeItemSheet extends foundry.appv1.sheets.ItemSheet {
         data.meleeAttributeOptions = { '': 'Auto (legacy)', strength: 'Strength', dexterity: 'Dexterity' };
         data.selectedCaliber = caliberSelection(this.item.type === "weapon" ? this.item.system.ammo_type : this.item.system.caliber);
         data.ammoDamageTypes = {"none": "Standard projectile", "bullets": "Normal Bullet", "hollowPoint": "Hollow Point", "armorPiercing": "Armor Piercing", "slug": "Slug", "buckshot": "Buckshot", "birdshot": "Birdshot", "shotgun": "Shotgun", "explosive": "Explosive", "poison": "Poison", "corrosive": "Corrosive"};
+        data.attachmentSlotOptions = { optic: 'Optic', muzzle: 'Muzzle', underbarrel: 'Underbarrel', stock: 'Stock', accessory: 'Accessory' };
+        data.attachmentCategoryOptions = { firearm: 'Firearm', launcher: 'Launcher', bow: 'Bow', crossbow: 'Crossbow', melee: 'Melee', any: 'Any weapon' };
         data.skillOptions = Object.fromEntries((this.item.parent?.items ?? []).filter(item => item.type === "skill").map(item => [item.name, item.name]));
         data.selectedSkillName = this.item.system.skillName || this.item.parent?.items.get(this.item.system.skillId)?.name || "";
         data.isGM = game.user.isGM;

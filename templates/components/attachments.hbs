@@ -1,0 +1,8 @@
+<div class="item-table"><h2 class="header-with-button"><button type="button" class="create-item" data-create="attachment">+</button><span>Attachments</span></h2>
+<table><thead><tr><th class="table-left-align">Name</th><th>Slot</th><th>Installed on</th><th></th></tr></thead><tbody>
+{{#each actor.attachment as |item|}}
+<tr class="item" data-item-id="{{item._id}}"><td class="item-name">{{item.name}}</td><td>{{item.system.slot}}</td>
+<td>{{#if item.installedWeaponName}}{{item.installedWeaponName}} <button type="button" class="remove-attachment" title="Remove (Help action)">Remove</button>{{else}}{{#if item.system.installedWeaponId}}Missing weapon <button type="button" class="remove-attachment">Clear</button>{{else}}Available{{/if}}{{/if}}</td>
+<td><a class="item-control item-delete" title="Delete"><i class="fas fa-trash"></i></a></td></tr>
+{{/each}}
+</tbody></table></div>

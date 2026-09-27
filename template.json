@@ -204,6 +204,7 @@
             "weapon",
             "armor",
             "consumable",
+            "attachment",
             "item",
             "aspect",
             "magazine",
@@ -330,6 +331,15 @@
                 "common",
                 "weapon"
             ]
+        },
+        "attachment": {
+            "templates": ["common"],
+            "slot": "accessory",
+            "weaponCategory": "firearm",
+            "installedWeaponId": "",
+            "attackBonus": 0,
+            "recoilReduction": 0,
+            "rangeBonusMeters": 0
         },
         "armor": {
             "templates": [
