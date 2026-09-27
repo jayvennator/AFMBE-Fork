@@ -10,5 +10,5 @@ export function fireMode(mode, weapon) {
 export function volleyHits(mode, total, rounds) {
     if (total < 9) return 0;
     const tiers = Math.floor((total - 9) / 2) + 1;
-    return Math.min(rounds, tiers * (mode === 'automatic' ? 2 : 1));
+    return Math.min(rounds, mode === 'automatic' ? tiers + 1 : tiers);
 }

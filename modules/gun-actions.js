@@ -10,6 +10,9 @@ export function recoilPerShot(weapon) {
     const value = Number(weapon.system.recoil ?? 0);
     return Number.isSafeInteger(value) && value >= 0 ? Math.min(value, 20) : 0;
 }
+export function recoilPenaltyForShot(shot, weapon) {
+    return shot <= 1 ? 0 : -(shot - 1) * recoilPerShot(weapon);
+}
 function sequence(actor) {
     const state = actionState(actor);
     if (!state) return null;
@@ -22,11 +25,11 @@ export function gunPreview(actor, weapon) {
     const shots = state?.shotsByWeapon?.[weapon.id] ?? 0;
     const action = actionState(actor);
     const continues = state && state.weaponId === weapon.id && state.shotsInAction < rateOfFire(weapon) && state.offensiveUsed === action.counts.offensive;
-    return { shot: shots + 1, recoilPenalty: -(shots + 1) * recoilPerShot(weapon),
+    return { shot: shots + 1, recoilPenalty: recoilPenaltyForShot(shots + 1, weapon),
         shotsInAction: continues ? state.shotsInAction : 0, rateOfFire: rateOfFire(weapon),
         actionPenalty: continues ? state.actionPenalty : -2 * (action?.counts.offensive ?? 0) };
 }
-/** Reserves a single semi-auto trigger pull; recoil stays with this gun across Offensive actions this turn. */
+/** Reserves one trigger pull; recoil stays with this gun across Offensive actions this turn. */
 export async function prepareGunShot(actor, weapon) {
     if (!actor.isOwner) throw new Error('Only the actor owner can fire this weapon.');
     if (locks.has(actor.uuid)) throw new Error('Another shot is being recorded. Try again.');
@@ -44,6 +47,6 @@ export async function prepareGunShot(actor, weapon) {
         const shot = (Number(state.shotsByWeapon?.[weapon.id]) || 0) + 1;
         await actor.setFlag(SYSTEM_ID, 'gunSequence', { ...state, weaponId: weapon.id, shotsInAction, actionPenalty,
             offensiveUsed: continues ? used : used + 1, shotsByWeapon: { ...state.shotsByWeapon, [weapon.id]: shot } });
-        return { shot, shotsInAction, rateOfFire: rateOfFire(weapon), recoilPenalty: -shot * recoilPerShot(weapon), actionPenalty };
+        return { shot, shotsInAction, rateOfFire: rateOfFire(weapon), recoilPenalty: recoilPenaltyForShot(shot, weapon), actionPenalty };
     } finally { locks.delete(actor.uuid); }
 }

@@ -17,18 +17,18 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Foundry package
         run: |
-          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.23.zip" . -x '.git/*' '.github/*'
+          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.24.zip" . -x '.git/*' '.github/*'
           cp system.json "$RUNNER_TEMP/system.json"
-          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.23.zip" system.json | python3 -m json.tool >/dev/null
-          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.23.zip"
+          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.24.zip" system.json | python3 -m json.tool >/dev/null
+          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.24.zip"
       - name: Publish prerelease
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.2.1-test.23 \
-            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.23.zip" \
+          gh release create v1.2.1-test.24 \
+            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.24.zip" \
             "$RUNNER_TEMP/system.json" \
             --target "$GITHUB_SHA" \
-            --title "AFMBE: Left Behind V13 burst and automatic fire test 23" \
-            --notes "Foundry V13 build 351 test. Adds burst and automatic fire with ammunition use, success-tier hit counts, recoil tracking, and per-hit armor resolution." \
+            --title "AFMBE: Left Behind V13 burst and automatic fire test 24" \
+            --notes "Foundry V13 build 351 test. Recoil begins on the second trigger pull; automatic fire lands two hits on ordinary success and one additional hit per higher success tier." \
             --prerelease
