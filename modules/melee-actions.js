@@ -1,3 +1,4 @@
+import { traitRollEffects, traitSummary } from './trait-effects.js';
 import { actionState, spendAction } from './action-economy.js';
 import { attributeBonus, skillBonus } from './consumables.js';
 const SYSTEM_ID = 'afmbe-left-behind';
@@ -56,11 +57,12 @@ export async function prepareMeleeStrike(actor, weapon, skill) {
                 const constitution = (Number(actor.system.primaryAttributes?.constitution?.value) || 0) + attributeBonus(actor, 'constitution');
                 const skillLevel = (Number(skill?.system.level) || 0) + skillBonus(actor, skill);
                 const roll = await new Roll('1d10').evaluate();
-                const total = roll.total + constitution + skillLevel + actionPenalty;
+                const automatic = traitRollEffects(actor, {kind: 'endurance', attribute: 'constitution', skillName: skill?.name});
+                const total = roll.total + constitution + skillLevel + actionPenalty + automatic.total;
                 const passed = total >= 9;
                 const esc = foundry.utils.escapeHTML;
                 await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), rolls: [roll],
-                    content: `<h2>${esc(actor.name)} tests endurance</h2><p>Constitution ${constitution} + ${esc(skill?.name ?? 'no skill')} ${skillLevel} + action ${actionPenalty} + roll ${roll.total} = <strong>${total}</strong> vs 9. ${passed ? 'Attack continues.' : 'No additional melee attack.'}</p>` });
+                    content: `<h2>${esc(actor.name)} tests endurance</h2><p>Constitution ${constitution} + ${esc(skill?.name ?? 'no skill')} ${skillLevel} + action ${actionPenalty} + traits ${traitSummary(automatic, null, null, esc)} + roll ${roll.total} = <strong>${total}</strong> vs 9. ${passed ? 'Attack continues.' : 'No additional melee attack.'}</p>` });
                 if (!passed) {
                     await actor.setFlag(SYSTEM_ID, 'meleeSequence', { ...state, weaponId: weapon.id, swingsInAction: swingLimit(weapon), offensiveUsed: used + 1 });
                     return null;

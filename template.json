@@ -299,7 +299,8 @@
                     "speed": 0,
                     "essence": 0,
                     "initiative": 0
-                }
+                },
+                "autoRollEffects": []
             }
         },
         "quality": {

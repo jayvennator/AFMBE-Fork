@@ -1,3 +1,4 @@
+import { traitRollEffects, traitSummary } from './trait-effects.js';
 import { spendAction } from './action-economy.js';
 import { attributeBonus, skillBonus } from './consumables.js';
 import { damageType } from './damage-types.js';
@@ -97,10 +98,11 @@ export async function promptLinkedDefense(message) {
             try { action = await spendAction(defender, 'defensive'); }
             catch (error) { return ui.notifications.warn(error.message); }
             const roll = await new Roll('1d10').evaluate();
-            const total = roll.total + attr + level + modifier + action.penalty;
+            const automatic = traitRollEffects(defender, {kind: 'defense', mode: form.elements.mode.value, attribute: attributeKey, skillName: skill?.name});
+            const total = roll.total + attr + level + modifier + action.penalty + automatic.total;
             const mode = form.elements.mode.value;
             await ChatMessage.create({ user: game.user.id, speaker: ChatMessage.getSpeaker({ actor: defender }), rolls: [roll],
-                content: `<h2>${escape(defender.name)} defends</h2><p>${escape(mode)}: ${roll.total} + ${escape(attributeKey)} ${attr} + ${escape(skill?.name ?? 'no skill')} ${level} + modifier ${modifier} + action ${action.penalty} = <strong>${total}</strong></p>`,
+                content: `<h2>${escape(defender.name)} defends</h2><p>${escape(mode)}: ${roll.total} + ${escape(attributeKey)} ${attr} + ${escape(skill?.name ?? 'no skill')} ${level} + modifier ${modifier} + action ${action.penalty} + traits ${traitSummary(automatic, null, null, escape)} = <strong>${total}</strong></p>`,
                 flags: { [SYSTEM_ID]: { defenseResponse: { attackUuid: message.uuid, defenderUuid: defender.uuid, mode, total } } } });
         } }
     }, default: 'roll' }, { classes: ['dialog', 'afmbe-left-behind'] }).render(true);
