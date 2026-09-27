@@ -275,7 +275,12 @@
                 "burstSize": 3,
                 "recoil": 0,
                 "loadedMagazineId": "",
-                "usesMagazines": false
+                "usesMagazines": false,
+                "allowedFireModes": {
+                    "semi": true,
+                    "burst": true,
+                    "automatic": true
+                }
             },
             "common": {
                 "encumbrance": 0,

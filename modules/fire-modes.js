@@ -1,3 +1,10 @@
+export function allowedFireModes(weapon) {
+    const configured = weapon.system.allowedFireModes;
+    // Existing items retain their old choices until a GM configures them.
+    if (!configured || typeof configured !== 'object') return ['semi', 'burst', 'automatic'];
+    const modes = ['semi', 'burst', 'automatic'].filter(mode => configured[mode] === true);
+    return modes.length ? modes : ['semi'];
+}
 /** One trigger pull is one attack and one recoil step, regardless of rounds spent. */
 export function fireMode(mode, weapon) {
     if (mode === 'burst') {

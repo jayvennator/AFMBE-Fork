@@ -1,7 +1,7 @@
 import { isMeleeAttack } from './linked-combat.js';
 import { meleeAttribute, meleePreview, prepareMeleeStrike } from './melee-actions.js';
 import { gunPreview, prepareGunShot } from './gun-actions.js';
-import { fireMode, volleyHits } from './fire-modes.js';
+import { allowedFireModes, fireMode, volleyHits } from './fire-modes.js';
 import { weaponCategory, feedSystem, compatibleLooseAmmo, loadInternalRound, unloadInternalRounds, removeMagazine } from './weapon-feed.js';
 import { actionPanel, actionState, spendAction, correctAction } from './action-economy.js';
 import { measureWeaponRange } from './weapon-range.js';
@@ -595,6 +595,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         const magazineMode = !isMelee && (feed === "detachable" || (feed === "legacy" && Boolean(weapon.system.usesMagazines)))
         const hasMagazine = !isMelee && feed !== "direct" && (magazineMode || ["internal", "cylinder", "single"].includes(feed) || Number(weapon.system.capacity?.max) > 0)
         const gunState = !isMelee ? gunPreview(this.actor, weapon) : null
+        const modeOptions = allowedFireModes(weapon).map(mode => `<option value="${mode}">${mode === 'semi' ? 'Semi-auto (1 round)' : mode === 'burst' ? `Burst (${fireMode(mode, weapon).rounds} rounds; −3)` : 'Automatic (10 rounds; −4)'}</option>`).join('')
         const offensivePreview = actionState(this.actor)
         const rangePreview = isMelee ? { penalty: 0, note: "Melee range: target must be adjacent." } : measureWeaponRange(this.actor, weapon)
         const meleeState = isMelee ? meleePreview(this.actor, weapon) : null
@@ -603,7 +604,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         const content = `<form class="afmbe-attack-dialog">
             <div class="form-group"><label>Attribute</label><select name="attribute">${options}</select></div>
             <div class="form-group"><label>Skill</label><select name="skill"><option value="">None</option>${skillOptions}</select></div>
-            ${category === 'firearm' ? `<div class="form-group"><label>Firing mode</label><select name="fireMode"><option value="semi">Semi-auto (1 round)</option><option value="burst">Burst (${fireMode('burst', weapon).rounds} rounds; −3)</option><option value="automatic">Automatic (10 rounds; −4)</option></select></div>` : ''}
+            ${category === 'firearm' ? `<div class="form-group"><label>Firing mode</label><select name="fireMode">${modeOptions}</select></div>` : ''}
             <div class="form-group"><label>Aimed location</label><select name="location">
                 <option value="body">Body (0)</option><option value="arms">Arm (-2)</option><option value="legs">Leg (-2)</option><option value="head">Head (-4)</option>
             </select></div>
@@ -649,7 +650,9 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                     const looseProjectile = feed === "direct" ? compatibleLooseAmmo(this.actor, weapon)[0] : null
                     if (feed === "direct" && !looseProjectile) { ui.notifications.warn("No compatible arrows in loose ammunition."); return }
                     if (feed === "single" && category === "crossbow" && Number(weapon.system.capacity?.max) > 1) { ui.notifications.warn("Crossbow capacity must be 1. Set it on the weapon sheet."); return }
-                    const firing = category === 'firearm' ? fireMode(form.elements.fireMode?.value, weapon) : fireMode('semi', weapon)
+                    const selectedMode = category === 'firearm' ? form.elements.fireMode?.value : 'semi'
+                    if (category === 'firearm' && !allowedFireModes(weapon).includes(selectedMode)) { ui.notifications.warn('That firing mode is unavailable for this weapon.'); return }
+                    const firing = fireMode(selectedMode, weapon)
                     if (firing.mode !== 'semi' && ['single', 'cylinder'].includes(feed) && Number(weapon.system.capacity?.max) < firing.rounds) { ui.notifications.warn('This weapon cannot hold enough rounds for that firing mode.'); return }
                     const shots = hasMagazine ? firing.rounds : 0
                     const remaining = magazineMode && !isMelee ? Number(activeMagazine?.system.rounds) : Number(weapon.system.capacity?.value)

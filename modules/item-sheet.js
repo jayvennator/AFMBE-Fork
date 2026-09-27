@@ -32,6 +32,7 @@ export class afmbeItemSheet extends foundry.appv1.sheets.ItemSheet {
         data.attackModeOptions = { auto: 'Auto (legacy)', melee: 'Melee', ranged: 'Ranged' };
         data.weaponCategoryOptions = { auto: 'Auto (existing weapon)', melee: 'Melee', firearm: 'Firearm', bow: 'Bow', crossbow: 'Crossbow', launcher: 'Launcher' };
         data.feedSystemOptions = { auto: 'Auto (existing capacity/magazine)', detachable: 'Detachable magazine', internal: 'Internal magazine / tube', cylinder: 'Revolver cylinder', single: 'Single shot / crossbow' };
+        data.allowedFireModes = this.item.system.allowedFireModes ?? {semi: true, burst: true, automatic: true};
         data.showMeleeFields = weaponCategory(this.item) === 'melee';
         data.showRangedFields = weaponCategory(this.item) !== 'melee';
         data.showGunFields = ['firearm', 'launcher'].includes(weaponCategory(this.item));
