@@ -7,6 +7,7 @@
         {{#if actor.selectedInventoryItem.canEquip}}<button type="button" class="inventory-equip">{{#if actor.selectedInventoryItem.system.equipped}}Unequip{{else}}Equip{{/if}}</button>{{/if}}
         {{#if actor.selectedInventoryItem.canUse}}<button type="button" class="use-consumable">Use</button>{{/if}}
         {{#if actor.selectedInventoryItem.canRotate}}<button type="button" class="inventory-rotate" title="Turn this item 90 degrees">Rotate ↻</button>{{/if}}
+        {{#if actor.selectedInventoryItem.canDetach}}<button type="button" class="inventory-detach">Detach from weapon</button>{{/if}}
         {{#if actor.selectedInventoryItem.stored}}<button type="button" class="inventory-unpack">Take out</button>{{/if}}
         {{#if actor.selectedInventoryItem.canSplit}}<button type="button" class="inventory-split">Split stack</button>{{/if}}
         {{#each actor.inventoryGrids as |container|}}
@@ -31,9 +32,9 @@
 </div>
 {{#each actor.inventoryGrids as |container|}}
 <div class="item-table"><h3>{{container.label}} ({{container.width}}×{{container.height}}{{#if container.maxWeight}}, max {{container.maxWeight}} lb{{/if}}){{#if container.type}}{{#unless container.equipped}} — not worn{{/unless}}{{/if}}</h3>
-<div class="afmbe-inventory-grid" data-container-id="{{container.id}}" data-width="{{container.width}}" style="--inventory-columns:{{container.width}}">
+<div class="afmbe-inventory-grid" data-container-id="{{container.id}}" data-width="{{container.width}}" style="--inventory-columns:{{container.width}};--inventory-rows:{{container.height}}">
     {{#each container.cells as |cell|}}
-    <div class="inventory-grid-cell" data-container-id="{{container.id}}" data-x="{{cell.x}}" data-y="{{cell.y}}"></div>
+    <div class="inventory-grid-cell" data-container-id="{{container.id}}" data-x="{{cell.x}}" data-y="{{cell.y}}" style="grid-column:{{cell.column}};grid-row:{{cell.row}}"></div>
     {{/each}}
     {{#each container.contents as |stored|}}
     <div class="item inventory-grid-item" data-item-id="{{stored.id}}" title="{{stored.name}} ({{stored.width}}×{{stored.height}}) — click for actions or drag to move" style="grid-column:{{stored.column}} / span {{stored.width}};grid-row:{{stored.row}} / span {{stored.height}}"><span class="item-label">{{stored.name}}</span>

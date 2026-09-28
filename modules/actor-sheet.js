@@ -163,11 +163,14 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         actorData.backpack = backpack
         actorData.rig = rig
         const allStored = sheetData.items.filter(entry => !['skill','quality','drawback','power','aspect','backpack','rig'].includes(entry.type) &&
-            !(entry.type === 'magazine' && entry.system.insertedInWeaponId) &&
-            !(entry.type === 'attachment' && entry.system.installedWeaponId))
+            !(entry.type === 'magazine' && entry.system.insertedInWeaponId && !storageLocation(entry)) &&
+            !(entry.type === 'attachment' && entry.system.installedWeaponId && !storageLocation(entry)))
         actorData.inventoryGrids = containers(this.actor).map(container => ({
             ...container,
-            cells: Array.from({ length: container.width * container.height }, (_, index) => ({ x: index % container.width, y: Math.floor(index / container.width) })),
+            cells: Array.from({ length: container.width * container.height }, (_, index) => ({
+                x: index % container.width, y: Math.floor(index / container.width),
+                column: index % container.width + 1, row: Math.floor(index / container.width) + 1
+            })),
             contents: allStored.filter(entry => storageLocation(entry) === container.id).map(entry => {
                 const size = dimensions(entry)
                 return { id: entry._id ?? entry.id, name: entry.name, type: entry.type,
@@ -188,6 +191,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             canEquip: ['weapon', 'armor', 'item', 'backpack', 'rig'].includes(selected.type),
             canUse: selected.type === 'consumable', stored: Boolean(storageLocation(selected)),
             canSplit: ['ammunition', 'consumable', 'item'].includes(selected.type) && Number(selected.system.qty) > 1,
+            canDetach: selected.type === 'attachment' && Boolean(selected.system.installedWeaponId),
             canRotate: dimensions(selected).width !== dimensions(selected).height,
             footprint: dimensions(selected)
         } : null
@@ -325,6 +329,11 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         html.find('.inventory-rotate').click(async event => {
             const item = this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)
             try { await this._rotateInventoryItem(item) }
+            catch (error) { ui.notifications.warn(error.message) }
+        })
+        html.find('.inventory-detach').click(async event => {
+            const item = this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)
+            try { await removeAttachment(this.actor, item) }
             catch (error) { ui.notifications.warn(error.message) }
         })
         html.find('.inventory-split').click(async event => {
@@ -1140,6 +1149,8 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         if (['weapon', 'armor', 'item', 'backpack', 'rig'].includes(item.type))
             add(item.system.equipped ? 'Unequip' : 'Equip', () => this._setInventoryEquipped(item, !item.system.equipped))
         if (item.type === 'consumable') add('Use', () => useConsumable(item))
+        if (item.type === 'attachment' && item.system.installedWeaponId)
+            add('Detach from weapon', () => removeAttachment(this.actor, item))
         if (dimensions(item).width !== dimensions(item).height)
             add('Rotate 90°', () => this._rotateInventoryItem(item))
         if (storageLocation(item)) add('Take out', () => unpackItem(this.actor, item))

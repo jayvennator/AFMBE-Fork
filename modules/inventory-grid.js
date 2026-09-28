@@ -40,6 +40,8 @@ export function placementError(actor, item, targetId, x, y, rotated = Boolean(it
     if (!target) return 'Equip a backpack or rig before placing items in it.';
     if (target.id !== 'pockets' && !target.equipped) return 'Equip this backpack or rig first.';
     if (['backpack', 'rig', 'skill', 'quality', 'drawback', 'power', 'aspect'].includes(item.type)) return 'This item cannot go inside a container.';
+    if (item.type === 'attachment' && item.system.installedWeaponId) return 'Detach this attachment from its weapon before packing it.';
+    if (item.type === 'magazine' && item.system.insertedInWeaponId) return 'Remove this magazine from its weapon before packing it.';
     if ((target.id === 'pockets' || target.type === 'rig') && !canCarryQuick(item)) return 'Only small supplies, magazines, and marked quick-access items fit here.';
     const size = dimensions(item, rotated);
     if (!Number.isSafeInteger(x) || !Number.isSafeInteger(y) || x < 0 || y < 0 || x + size.width > target.width || y + size.height > target.height) return 'The item does not fit within this grid.';

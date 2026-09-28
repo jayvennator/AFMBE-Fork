@@ -684,6 +684,7 @@
     display: grid;
     position: relative;
     grid-template-columns: repeat(var(--inventory-columns), 36px);
+    grid-template-rows: repeat(var(--inventory-rows), 38px);
     grid-auto-rows: 38px;
     width: max-content;
     max-width: none;

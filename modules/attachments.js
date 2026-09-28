@@ -14,7 +14,7 @@ const bounded = (value, min, max) => {
 /** Only actor-owned attachments with a valid slot and category affect a weapon. */
 export function installedAttachments(actor, weapon) {
     if (!actor || !weapon || weapon.parent?.uuid !== actor.uuid) return [];
-    return actor.items.filter(item => item.type === 'attachment' && item.system.installedWeaponId === weapon.id &&
+    return actor.items.filter(item => item.type === 'attachment' && item.system.installedWeaponId === weapon.id && !storageLocation(item) &&
         ATTACHMENT_SLOTS.includes(item.system.slot) &&
         ['any', weaponCategory(weapon)].includes(item.system.weaponCategory));
 }
