@@ -899,17 +899,17 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                 <option value="" ${usingOtherSkill ? '' : 'selected'}>Choose a skill</option>${otherSkillOptions}
             </select></div>` : ''}
             ${category === 'firearm' ? `<div class="form-group"><label>Firing mode</label><select name="fireMode">${modeOptions}</select></div>` : ''}
+            ${isMelee ? '' : `<div class="form-group"><label>Target cover</label><select name="cover">
+                <option value="none">None</option><option value="partial">Partial (−1d4)</option><option value="full">Full (−1d8)</option>
+            </select></div>`}
             <p class="afmbe-attack-summary" aria-live="polite">${escape(firstSummary)}</p>
-            <details ${defaultLocation !== 'body' ? 'open' : ''}><summary>Adjust attack (target, cover, traits, modifier)</summary>
+            <details ${defaultLocation !== 'body' ? 'open' : ''}><summary>Adjust attack (target, traits, modifier)</summary>
                 <div class="form-group"><label>Aimed location</label><select name="location">
                     <option value="body" ${defaultLocation === 'body' ? 'selected' : ''}>Body (0)</option>
                     <option value="arms" ${defaultLocation === 'arms' ? 'selected' : ''}>Arm (-2)</option>
                     <option value="legs" ${defaultLocation === 'legs' ? 'selected' : ''}>Leg (-2)</option>
                     <option value="head" ${defaultLocation === 'head' ? 'selected' : ''}>Head (-4)</option>
                 </select></div>
-                ${isMelee ? '' : `<div class="form-group"><label>Target cover</label><select name="cover">
-                    <option value="none">None</option><option value="partial">Partial (−1d4)</option><option value="full">Full (−1d8)</option>
-                </select></div>`}
                 <div class="form-group"><label>Quality</label><select name="quality"><option value="">None</option>${qualityOptions}</select></div>
                 <div class="form-group"><label>Drawback</label><select name="drawback"><option value="">None</option>${drawbackOptions}</select></div>
                 <div class="form-group"><label>Other modifier</label><input type="number" name="modifier" value="0" step="1"></div>
