@@ -18,7 +18,6 @@ import { containers, dimensions, firstFreeCell, nearestFreeCell, moveInventoryIt
 import { loadedMagazine, compatibleMagazines, reloadWeapon, loadMagazine, unloadMagazine } from './magazines.js';
 import { coverForAttack, toggleCoverStance } from './region-cover.js';
 import { beginSuppressiveCone } from './suppressive-fire.js';
-import { rollAttackD10 } from './rule-of-ten.js';
 
 export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
 
@@ -1043,26 +1042,30 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                         await activeMagazine.update({ 'system.rounds': remaining - firing.rounds })
                         await weapon.update({ 'system.capacity.value': remaining - firing.rounds })
                     } else if (hasMagazine) await weapon.update({ 'system.capacity.value': remaining - shots })
-                    const attackDie = await rollAttackD10()
+                    const roll = await new Roll('1d10').evaluate()
+                    const natural = Number(roll.total)
+                    const criticalHit = natural === 10
+                    const criticalMiss = natural === 1
                     const coverRoll = cover === 'none' ? null : await new Roll(cover === 'partial' ? '1d4' : '1d8').evaluate()
                     const coverPenalty = -(coverRoll?.total ?? 0)
                     const ammoHitBonus = isMelee ? 1 : hitBonus(firedDamageType)
-                    const total = attackDie.total + attribute + skillLevel + location + modifier + automatic.total + qualityBonus + drawbackBonus + ammoHitBonus + range.penalty + action.penalty + firing.penalty + attachments.attack + (meleeStrike?.strainPenalty ?? gunShot?.recoilPenalty ?? 0) + coverPenalty
-                    const success = total >= 9
-                    const degrees = success ? Math.floor((total - 9) / 2) + 1 : 0
-                    const hits = success ? volleyHits(firing.mode, total, firing.rounds) : 0
+                    const total = roll.total + attribute + skillLevel + location + modifier + automatic.total + qualityBonus + drawbackBonus + ammoHitBonus + range.penalty + action.penalty + firing.penalty + attachments.attack + (meleeStrike?.strainPenalty ?? gunShot?.recoilPenalty ?? 0) + coverPenalty
+                    const success = !criticalMiss && (criticalHit || total >= 9)
+                    const effectiveTotal = criticalHit ? Math.max(9, total) : total
+                    const degrees = success ? Math.floor((effectiveTotal - 9) / 2) + 1 : 0
+                    const hits = success ? volleyHits(firing.mode, effectiveTotal, firing.rounds) : 0
                     const locationName = form.elements.location.selectedOptions[0].textContent
                     const ammoNote = feed === 'direct' ? `<p>1 ${escape(looseProjectile.name)} used; ${looseProjectile.system.qty} remain.</p>` : hasMagazine ? `<p>${firing.rounds} ${escape(firedDamageType)} round(s) fired; ${weapon.system.capacity.value}/${weapon.system.capacity.max} remaining.</p>` : ''
                     const rangeDetail = isMelee ? `melee swing ${meleeStrike.swing}/${meleePreview(this.actor, weapon).limit}; strain ${meleeStrike.strainPenalty}; Endurance spent ${meleeStrike.enduranceSpent}` : `shot ${gunShot.shot} this turn (${gunShot.shotsInAction}/${gunShot.rateOfFire} this action), recoil ${gunShot.recoilPenalty}; ` + (range.note ? 'range unconfigured (0)' : `range ${range.penalty} (${range.distance.toFixed(1)} m / ${range.normalRange} m)` )
                     const coverDetail = coverRoll ? `${cover} cover${detectedCover?.region ? ` (Region ${escape(detectedCover.region.name ?? detectedCover.region.id)})` : ''} −1d${cover === 'partial' ? 4 : 8} (${coverPenalty})` : coverChoice === 'auto' ? 'auto cover: none' : 'cover: none'
-                    const ruleNote = attackDie.faces.length > 1 ? ` (Rule of ${attackDie.faces[0]}: ${attackDie.faces.join(' → ')}; adjusted die ${attackDie.total})` : ''
-                    const content = `<h2>${escape(weapon.name)}</h2><div class="afmbe-roll-kind">Attack</div><p>${escape(attributeKey)} ${attribute}, ${escape(skill?.name ?? 'No skill')} ${skillLevel}, ${escape(locationName)}, modifier ${modifier}, traits ${traitSummary(automatic, quality, drawback, escape)}, ${isMelee ? 'melee' : 'ammo'} ${ammoHitBonus >= 0 ? "+" : ""}${ammoHitBonus}, attachments ${attachments.attack >= 0 ? '+' : ''}${attachments.attack}${attachments.items.length ? ` (${attachments.items.map(item => escape(item.name)).join(', ')})` : ''}, ${rangeDetail}, mode ${firing.mode} ${firing.penalty}, action ${action.penalty}, ${coverDetail}</p><p>Roll ${attackDie.total}${ruleNote} + modifiers = <strong>${total}</strong> vs 9 — <strong>${success ? `Hit (${degrees} degree${degrees === 1 ? '' : 's'}; ${hits} of ${firing.rounds} rounds hit)` : 'Miss'}</strong></p>${ammoNote}`
+                    const criticalNote = criticalHit ? 'Natural 10: guaranteed hit; penetrating damage doubled.' : criticalMiss ? 'Natural 1: automatic miss.' : ''
+                    const content = `<h2>${escape(weapon.name)}</h2><div class="afmbe-roll-kind">Attack</div><p>${escape(attributeKey)} ${attribute}, ${escape(skill?.name ?? 'No skill')} ${skillLevel}, ${escape(locationName)}, modifier ${modifier}, traits ${traitSummary(automatic, quality, drawback, escape)}, ${isMelee ? 'melee' : 'ammo'} ${ammoHitBonus >= 0 ? "+" : ""}${ammoHitBonus}, attachments ${attachments.attack >= 0 ? '+' : ''}${attachments.attack}${attachments.items.length ? ` (${attachments.items.map(item => escape(item.name)).join(', ')})` : ''}, ${rangeDetail}, mode ${firing.mode} ${firing.penalty}, action ${action.penalty}, ${coverDetail}</p><p>Roll ${roll.total} + modifiers = <strong>${total}</strong> vs 9 — <strong>${success ? `Hit (${degrees} degree${degrees === 1 ? '' : 's'}; ${hits} of ${firing.rounds} rounds hit)` : 'Miss'}</strong>${criticalNote ? ` — ${criticalNote}` : ''}</p>${ammoNote}`
                     await ChatMessage.create({ user: game.user.id, speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-                        content: content + `<p>${success ? `Awaiting ${escape(target.name)}’s defense.` : 'Attack misses; no damage roll.'}</p>`, rolls: coverRoll ? [...attackDie.rolls, coverRoll] : attackDie.rolls,
+                        content: content + `<p>${success ? `Awaiting ${escape(target.name)}’s defense.` : 'Attack misses; no damage roll.'}</p>`, rolls: coverRoll ? [roll, coverRoll] : [roll],
                         flags: { 'afmbe-left-behind': { pendingAttack: {
                             attackerUuid: this.actor.uuid, targetUuid: target.uuid, targetName: target.name,
                             weaponUuid: weapon.uuid, weaponName: weapon.name, damageType: firedDamageType, total, location: hitLocation,
-                            melee: isMelee, roundsFired: firing.rounds, hits, firingMode: firing.mode, status: success ? 'pending' : 'miss', blocked: false
+                            melee: isMelee, roundsFired: firing.rounds, hits, firingMode: firing.mode, criticalHit, status: success ? 'pending' : 'miss', blocked: false
                         } } } })
                     if (feed === 'direct' && Number(looseProjectile.system.qty) === 0)
                         await this.actor.deleteEmbeddedDocuments('Item', [looseProjectile.id])

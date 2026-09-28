@@ -18,13 +18,13 @@ export function damageModifiers(value) {
         default: return { armor: 1, hp: 1 };
     }
 }
-export function resolveDamage(rawDamage, armorRoll, type, { headshot = false } = {}) {
+export function resolveDamage(rawDamage, armorRoll, type, { headshot = false, criticalHit = false } = {}) {
     const { armor, hp } = damageModifiers(type);
     const melee = ['twoHanded', 'slashing', 'stabbing'].includes(damageType(type));
     const adjustedDamage = rawDamage + (melee ? 1 : 0);
     const protection = Math.ceil(Math.max(0, armorRoll) * armor);
     const penetrating = Math.max(0, adjustedDamage - protection);
     // Headshots double the ammunition's HP multiplier after armor is applied.
-    const damageMultiplier = hp * (headshot ? 2 : 1);
+    const damageMultiplier = hp * (headshot ? 2 : 1) * (criticalHit ? 2 : 1);
     return { protection, penetrating, hpDamage: penetrating * damageMultiplier, armorMultiplier: armor, damageMultiplier, meleeBonus: melee ? 1 : 0 };
 }

@@ -11,6 +11,7 @@ const meleeTypes = new Set(['twoHanded', 'slashing', 'stabbing']);
 export function isMeleeAttack(weapon) { return weaponCategory(weapon) === 'melee'; }
 export function defenseOutcome(attack, mode, total) {
     if (mode === 'none') return { status: 'ready', blocked: false, result: 'No defense. The hit stands.' };
+    if (attack.criticalHit && mode !== 'block') return { status: 'ready', blocked: false, result: 'Natural 10: the hit cannot be dodged or ducked.' };
     if (attack.melee) {
         if (mode === 'dodge') return total > attack.total
             ? { status: 'avoided', blocked: false, result: 'Melee dodge succeeds. No damage.' }
@@ -44,7 +45,7 @@ export async function handleDefenseResponse(response) {
         if (!defender || !sender || (!sender.isGM && !defender.testUserPermission(sender, 'OWNER'))) return;
         if (data.mode !== 'none' && (!Number.isFinite(data.total) || !response.rolls?.length)) return;
         const outcome = defenseOutcome(attack, data.mode, Number(data.total));
-        const adjustedHits = data.mode === 'duck' && Number(data.total) >= 9 && outcome.status === 'ready'
+        const adjustedHits = !attack.criticalHit && data.mode === 'duck' && Number(data.total) >= 9 && outcome.status === 'ready'
             ? volleyHits(attack.firingMode, attack.total - 2, Number(attack.roundsFired) || 1) : attack.hits;
         await message.update({ [`flags.${SYSTEM_ID}.pendingAttack.hits`]: adjustedHits, [`flags.${SYSTEM_ID}.pendingAttack.status`]: outcome.status,
             [`flags.${SYSTEM_ID}.pendingAttack.blocked`]: outcome.blocked,
@@ -127,7 +128,7 @@ export async function rollLinkedDamage(message) {
             content: `<h2>Damage Rolls</h2><div class="afmbe-roll-kind">${foundry.utils.escapeHTML(weapon.name)}</div><p>${hits} hit(s): ${values.join(', ')}. Each hit resolves against armor separately.${attack.blocked ? ' Block halves damage after armor for each hit.' : ''}</p>`,
             flags: { [SYSTEM_ID]: { armorDamage: { targetUuid: attack.targetUuid, targetName: attack.targetName,
                 damage: values[0], damages: values, damageType: damageType(attack.damageType ?? weapon.system.damage_type), location: attack.location,
-                blocked: Boolean(attack.blocked), applied: false, attackUuid: message.uuid } } } });
+                blocked: Boolean(attack.blocked), criticalHit: Boolean(attack.criticalHit), applied: false, attackUuid: message.uuid } } } });
         await message.update({ [`flags.${SYSTEM_ID}.pendingAttack.status`]: 'complete' });
     } catch (error) {
         console.error('AFMBE linked damage failed', error);

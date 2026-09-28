@@ -67,7 +67,7 @@ export async function applyArmorDamage(message) {
                 if (value === 0 && state.value > 0) broken.add(item.name);
             }
             if (!coveringItems) await postArmorRoll(actor, null, await new Roll('0').evaluate(), '0');
-            const resolved = resolveDamage(raw, protection, type, { headshot: location === 'head' });
+            const resolved = resolveDamage(raw, protection, type, { headshot: location === 'head', criticalHit: Boolean(data.criticalHit) });
             results.push({ raw, protection: resolved.protection, penetrating: resolved.penetrating,
                 multiplier: resolved.damageMultiplier, damage: data.blocked ? Math.floor(resolved.hpDamage / 2) : resolved.hpDamage });
         }
