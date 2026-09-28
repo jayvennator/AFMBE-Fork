@@ -702,6 +702,23 @@
     font-size: 0.8rem;
     cursor: grab;
 }
+.afmbe-left-behind .afmbe-loadout { display: grid; grid-template-columns: minmax(180px, 0.42fr) minmax(0, 1fr); gap: 0.8rem; align-items: start; }
+.afmbe-left-behind .afmbe-loadout-slots, .afmbe-left-behind .afmbe-loadout-storage { min-width: 0; }
+.afmbe-left-behind .afmbe-equip-slot { border: 1px solid #888; padding: 0.45rem; margin-bottom: 0.5rem; min-height: 66px; }
+.afmbe-left-behind .afmbe-equip-slot > strong { display: block; border-bottom: 1px solid #888; margin-bottom: 0.3rem; }
+.afmbe-left-behind .afmbe-equip-slot .item, .afmbe-left-behind .inventory-grid-item { overflow-wrap: anywhere; }
+.afmbe-left-behind .afmbe-selected-item { border: 1px solid #888; background: rgba(80,100,120,0.12); padding: 0.35rem; margin-bottom: 0.6rem; min-height: 36px; }
+.afmbe-left-behind .afmbe-selected-item strong { display: block; margin-bottom: 0.2rem; }
+.afmbe-left-behind .afmbe-selected-item button { width: auto; height: auto; margin: 2px; padding: 0.1rem 0.35rem; font-size: 0.8rem; }
+.afmbe-left-behind .afmbe-loose-item { border: 1px solid #888; padding: 0.3rem; margin: 0.2rem 0; cursor: pointer; }
+.afmbe-left-behind .afmbe-loose-item:hover, .afmbe-left-behind .inventory-grid-item:hover { outline: 2px solid #82a7d5; }
+.afmbe-left-behind .afmbe-equip-slot button, .afmbe-left-behind .inventory-grid-item button { font-size: 0.75rem; width: auto; height: auto; padding: 0.12rem 0.25rem; }
+.afmbe-left-behind .afmbe-inventory-catalog { margin-top: 1rem; border-top: 1px solid #888; padding-top: 0.5rem; }
+.afmbe-left-behind .afmbe-inventory-catalog summary { cursor: pointer; font-weight: bold; }
+.afmbe-inventory-menu { position: fixed; z-index: 10000; display: flex; flex-direction: column; gap: 2px; min-width: 165px; max-height: 75vh; overflow-y: auto; background: #222b35; border: 1px solid #aab3bf; padding: 4px; box-shadow: 0 5px 15px #0009; }
+.afmbe-inventory-menu button { width: 100%; padding: 4px 8px; text-align: left; color: #eee; background: transparent; border: 0; cursor: pointer; }
+.afmbe-inventory-menu button:hover { background: #526577; }
+@media (max-width: 850px) { .afmbe-left-behind .afmbe-loadout { grid-template-columns: 1fr; } }
 
 /* ------------------------------------------- 
         Item Sheets

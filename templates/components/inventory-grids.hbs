@@ -1,6 +1,19 @@
 <div class="item-table">
-    <h2>Backpacks & combat rigs</h2>
-    <p>Wear one backpack and one rig. Drag an item to a grid cell; hold Shift while dropping to rotate it. Retrieving from a backpack takes a Help action in combat.</p>
+    <h2>Pockets and containers</h2>
+    <p>Drag items between grids or onto an equipment slot. Hold Shift on drop to rotate. Right-click an item for more actions. Retrieving from a backpack costs a Help action in combat.</p>
+    <div class="afmbe-selected-item">
+    {{#if actor.selectedInventoryItem}}
+        <div class="item" data-item-id="{{actor.selectedInventoryItem._id}}"><strong>{{actor.selectedInventoryItem.name}}</strong>
+        {{#if actor.selectedInventoryItem.canEquip}}<button type="button" class="inventory-equip">{{#if actor.selectedInventoryItem.system.equipped}}Unequip{{else}}Equip{{/if}}</button>{{/if}}
+        {{#if actor.selectedInventoryItem.canUse}}<button type="button" class="use-consumable">Use</button>{{/if}}
+        {{#if actor.selectedInventoryItem.stored}}<button type="button" class="inventory-unpack">Take out</button>{{/if}}
+        {{#if actor.selectedInventoryItem.canSplit}}<button type="button" class="inventory-split">Split stack</button>{{/if}}
+        {{#each actor.inventoryGrids as |container|}}
+        {{#if container.equipped}}<button type="button" class="inventory-autopack" data-container-id="{{container.id}}">To {{container.label}}</button>{{else}}{{#unless container.type}}<button type="button" class="inventory-autopack" data-container-id="{{container.id}}">To pockets</button>{{/unless}}{{/if}}
+        {{/each}}
+        <button type="button" class="inventory-open">Item details</button></div>
+    {{else}}<span>Click an item to see Equip, Use, and Move actions here.</span>{{/if}}
+    </div>
     {{#each actor.backpack as |item|}}
     <div class="item" data-item-id="{{item._id}}"><label><input type="checkbox" class="toggle-container-equipped" {{checked item.system.equipped}}> Wear</label>
         <span class="item-name">{{item.name}}</span> ({{item.system.grid.width}}×{{item.system.grid.height}}, {{item.system.grid.maxWeight}} lb max)
@@ -21,17 +34,13 @@
     <div class="inventory-grid-cell" data-container-id="{{container.id}}" data-x="{{cell.x}}" data-y="{{cell.y}}"></div>
     {{/each}}
     {{#each container.contents as |stored|}}
-    <div class="item inventory-grid-item" data-item-id="{{stored.id}}" title="{{stored.name}} ({{stored.width}}×{{stored.height}}) — drag to move" style="grid-column:{{stored.column}} / span {{stored.width}};grid-row:{{stored.row}} / span {{stored.height}}">{{stored.name}} <button type="button" class="inventory-unpack" title="Take out">×</button></div>
+    <div class="item inventory-grid-item" data-item-id="{{stored.id}}" title="{{stored.name}} ({{stored.width}}×{{stored.height}}) — click for actions or drag to move" style="grid-column:{{stored.column}} / span {{stored.width}};grid-row:{{stored.row}} / span {{stored.height}}"><span class="item-label">{{stored.name}}</span>
+    {{#if stored.qty}}<small>×{{stored.qty}}</small>{{/if}}</div>
     {{/each}}
 </div></div>
 {{/each}}
-<div class="item-table"><h3>Loose / not packed</h3><p>Items here have no quick-access slot. Weapons must be equipped; put small supplies in pockets or the rig.</p>
+<div class="item-table"><h3>Loose gear</h3><p>Items here have no quick-access slot. Equip weapons or armor; put small supplies in pockets or the rig.</p>
 {{#each actor.unassignedInventory as |item|}}
-<div class="item" data-item-id="{{item._id}}"><span class="item-name">{{item.name}}</span>
-    {{#if item.system.qty}}<button type="button" class="inventory-split">Split stack</button>{{/if}}
-    {{#each @root.actor.inventoryGrids as |container|}}
-    {{#if container.equipped}}<button type="button" class="inventory-autopack" data-container-id="{{container.id}}">Put in {{container.label}}</button>{{else}}{{#unless container.type}}<button type="button" class="inventory-autopack" data-container-id="{{container.id}}">Put in pockets</button>{{/unless}}{{/if}}
-    {{/each}}
-</div>
+<div class="item afmbe-loose-item" data-item-id="{{item._id}}">{{item.name}}</div>
 {{/each}}
 </div>

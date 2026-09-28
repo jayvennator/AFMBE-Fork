@@ -21,6 +21,7 @@ export function registerTemplates() {
         "systems/afmbe-left-behind/templates/components/armor.hbs",
         "systems/afmbe-left-behind/templates/components/attachments.hbs",
         "systems/afmbe-left-behind/templates/components/inventory-grids.hbs",
+        "systems/afmbe-left-behind/templates/components/equipment-layout.hbs",
         "systems/afmbe-left-behind/templates/components/grid-fields.hbs",
         "systems/afmbe-left-behind/templates/components/ready-gear.hbs",
         "systems/afmbe-left-behind/templates/components/qualities.hbs",

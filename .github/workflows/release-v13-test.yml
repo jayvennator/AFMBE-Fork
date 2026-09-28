@@ -17,10 +17,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Foundry package
         run: |
-          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.35.zip" . -x '.git/*' '.github/*'
+          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.36.zip" . -x '.git/*' '.github/*'
           cp system.json "$RUNNER_TEMP/system.json"
-          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.35.zip" system.json | python3 -m json.tool >/dev/null
-          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.35.zip"
+          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.36.zip" system.json | python3 -m json.tool >/dev/null
+          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.36.zip"
           python3 - <<'PY'
           import json
           manifest = json.load(open('system.json'))
@@ -33,10 +33,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.2.1-test.35 \
-            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.35.zip" \
+          gh release create v1.2.1-test.36 \
+            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.36.zip" \
             "$RUNNER_TEMP/system.json" \
             --target "$GITHUB_SHA" \
-            --title "AFMBE: Left Behind V13 inventory test 35" \
-            --notes "Foundry V13 build 351 test. Adds grid backpacks, combat rigs, pockets, weapon equip state, and combat access rules for ammunition, consumables, and attachments. Convert existing backpack items from their item sheets." \
+            --title "AFMBE: Left Behind V13 inventory test 36" \
+            --notes "Foundry V13 build 351 test. Consolidates equipment slots, pockets, rig, backpack, and loose gear on one screen. Click an item for Equip, Use, and Move actions; right-click for shortcuts, or drag a weapon or armor onto its slot." \
             --prerelease
