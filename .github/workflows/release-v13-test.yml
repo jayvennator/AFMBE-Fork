@@ -17,10 +17,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Foundry package
         run: |
-          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.57.zip" . -x '.git/*' '.github/*'
+          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.58.zip" . -x '.git/*' '.github/*'
           cp system.json "$RUNNER_TEMP/system.json"
-          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.57.zip" system.json | python3 -m json.tool >/dev/null
-          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.57.zip"
+          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.58.zip" system.json | python3 -m json.tool >/dev/null
+          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.58.zip"
           python3 - <<'PY'
           import json
           manifest = json.load(open('system.json'))
@@ -33,10 +33,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.2.1-test.57 \
-            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.57.zip" \
+          gh release create v1.2.1-test.58 \
+            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.58.zip" \
             "$RUNNER_TEMP/system.json" \
             --target "$GITHUB_SHA" \
-            --title "AFMBE: Left Behind V13 headshot damage test 57" \
-            --notes "Foundry V13 build 351 test. Natural 10 attacks always hit and double penetrating damage after ammo and headshot multipliers. Natural 1 attacks always miss. No weapon mishap effects yet." \
+            --title "AFMBE: Left Behind V13 headshot damage test 58" \
+            --notes "Foundry V13 build 351 test. Combat-only token movement: one free movement allowance per turn, one Constitution dash attempt for a second allowance, and Essence spent per meter of extra movement. Outside combat movement is unrestricted." \
             --prerelease

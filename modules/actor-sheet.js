@@ -18,6 +18,7 @@ import { containers, dimensions, firstFreeCell, nearestFreeCell, moveInventoryIt
 import { loadedMagazine, compatibleMagazines, reloadWeapon, loadMagazine, unloadMagazine } from './magazines.js';
 import { coverForAttack, toggleCoverStance } from './region-cover.js';
 import { beginSuppressiveCone } from './suppressive-fire.js';
+import { movementPanel, attemptDash } from './combat-movement.js';
 
 export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
 
@@ -224,6 +225,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                 this.actor.items.get(location).system.equipped)
         })
         actorData.actionEconomy = actionPanel(this.actor)
+        actorData.movement = movementPanel(this.actor)
         actorData.activeConsumables = activeBonuses(this.actor).map(effect => ({ ...effect, willCrash: effect.phase !== "crash" && Number(effect.crashPenalty) > 0 && Number(effect.crashDuration) > 0 }))
         actorData.power = power
         actorData.quality = quality
@@ -409,6 +411,10 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         html.find('.roll-combat-task').click(this._onCombatTaskRoll.bind(this));
         html.find('.take-cover').click(async () => {
             try { await toggleCoverStance(this.actor); }
+            catch (error) { ui.notifications.warn(error.message); }
+        });
+        html.find('.dash-action').click(async () => {
+            try { await attemptDash(this.actor); }
             catch (error) { ui.notifications.warn(error.message); }
         });
         html.find('.spend-action').click(async event => {

@@ -12,8 +12,10 @@ import { registerHandlebarsHelpers } from "./handlebars.js";
 import { applyArmorDamage } from "./armor-damage.js";
 import { registerRegionCoverControls } from './region-cover.js';
 import { renderSuppressiveFire, handleSuppressionResponse } from './suppressive-fire.js';
+import { registerCombatMovement } from './combat-movement.js';
 
 registerRegionCoverControls();
+registerCombatMovement();
 
 /* -------------------------------------------- */
 /*  Foundry VTT Initialization                  */

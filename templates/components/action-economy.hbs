@@ -1,6 +1,7 @@
 {{#if actor.actionEconomy}}
 <div class="afmbe-action-tracker">
     <h2>Combat actions</h2>
+    {{#if actor.movement}}<p>Move: {{actor.movement.remaining}} m remaining / {{actor.movement.allowance}} m per action. {{actor.movement.traveled}} m traveled this turn. {{#if actor.movement.dashAttempted}}Dash attempted.{{else}}<button type="button" class="dash-action">Dash (Constitution Task)</button>{{/if}}</p>{{/if}}
     <p>One free action of each type per turn. Each repeat is −2. Attack spends Offensive automatically. Defend and Roll help spend their action when rolled. Use Mark only for actions handled elsewhere.</p>
     <div class="afmbe-action-grid">
     {{#each actor.actionEconomy.rows as |row|}}
