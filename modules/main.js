@@ -10,6 +10,9 @@ import { afmbevehicleSheet } from "./vehicle-sheet.js"
 import { registerTemplates } from "./register-templates.js";
 import { registerHandlebarsHelpers } from "./handlebars.js";
 import { applyArmorDamage } from "./armor-damage.js";
+import { registerTileCoverControls } from './tile-cover.js';
+
+registerTileCoverControls();
 
 /* -------------------------------------------- */
 /*  Foundry VTT Initialization                  */
