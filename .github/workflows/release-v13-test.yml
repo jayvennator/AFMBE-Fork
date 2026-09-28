@@ -17,10 +17,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Foundry package
         run: |
-          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.39.zip" . -x '.git/*' '.github/*'
+          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.40.zip" . -x '.git/*' '.github/*'
           cp system.json "$RUNNER_TEMP/system.json"
-          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.39.zip" system.json | python3 -m json.tool >/dev/null
-          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.39.zip"
+          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.40.zip" system.json | python3 -m json.tool >/dev/null
+          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.40.zip"
           python3 - <<'PY'
           import json
           manifest = json.load(open('system.json'))
@@ -33,10 +33,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.2.1-test.39 \
-            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.39.zip" \
+          gh release create v1.2.1-test.40 \
+            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.40.zip" \
             "$RUNNER_TEMP/system.json" \
             --target "$GITHUB_SHA" \
-            --title "AFMBE: Left Behind V13 inventory test 39" \
-            --notes "Foundry V13 build 351 test. Adds a separate Items tab next to Equipment for item lists and editing. Weapon item sheets now display optic, muzzle, underbarrel, stock, and accessory slots; install via the existing Help task and remove directly from the slot. Installed attachments leave their storage grid and stay mounted on the weapon." \
+            --title "AFMBE: Left Behind V13 inventory test 40" \
+            --notes "Foundry V13 build 351 test. Adds two hand slots for loose gear, an off-character stash that does not add carrying weight, and clear Help action costs for backpack moves. Existing loose items remain in place and any overflow is marked. A weapon can now be equipped directly from a backpack with one Help action." \
             --prerelease

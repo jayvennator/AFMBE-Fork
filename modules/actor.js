@@ -1,3 +1,5 @@
+import { isStashed } from './inventory-grid.js';
+
 export class afmbeActor extends Actor {
   async _preCreate(data, options, user) {
     await super._preCreate(data, options, user);
@@ -225,6 +227,7 @@ export class afmbeActor extends Actor {
     for (let item of this.items.filter(i => i.system.hasOwnProperty('encumbrance'))) {
       const qty = item.system.qty != undefined ? Number(item.system.qty) : 1
       const weight = Number(item.system.encumbrance)
+      if (isStashed(this, item)) continue
       if (Number.isFinite(qty) && Number.isFinite(weight)) total += Math.max(0, weight) * Math.max(0, qty)
     }
 

@@ -13,7 +13,7 @@ import { promptArmorReplenishment } from './armor-replenishment.js';
 import { armorIntegrity } from './armor-integrity.js';
 import { attachmentModifiers, promptInstallAttachment, removeAttachment } from './attachments.js';
 import { SKILL_CATEGORIES, skillCategory } from './skill-categories.js';
-import { containers, dimensions, firstFreeCell, nearestFreeCell, moveInventoryItem, unpackItem, splitInventoryStack, storageLocation, inCombat } from './inventory-grid.js';
+import { containers, dimensions, firstFreeCell, nearestFreeCell, moveInventoryItem, unpackItem, splitInventoryStack, stashItem, storageLocation, inCombat, handCount, HAND_LIMIT, STASH, inventoryActionCost, itemWeight } from './inventory-grid.js';
 import { loadedMagazine, compatibleMagazines, reloadWeapon, loadMagazine } from './magazines.js';
 
 export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
@@ -166,6 +166,10 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             !(entry.type === 'attachment' && entry.system.installedWeaponId && !storageLocation(entry)))
         actorData.inventoryGrids = containers(this.actor).map(container => ({
             ...container,
+            usedWeight: this.actor.items.filter(entry => storageLocation(entry) === container.id).reduce((sum, entry) => sum + itemWeight(entry), 0).toFixed(1),
+            usedCells: allStored.filter(entry => storageLocation(entry) === container.id).reduce((sum, entry) => {
+                const size = dimensions(entry); return sum + size.width * size.height
+            }, 0),
             cells: Array.from({ length: container.width * container.height }, (_, index) => ({
                 x: index % container.width, y: Math.floor(index / container.width),
                 column: index % container.width + 1, row: Math.floor(index / container.width) + 1
@@ -181,18 +185,30 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                     rotated: Boolean(entry.system.storage?.rotated) }
             })
         }))
-        actorData.unassignedInventory = allStored.filter(entry => !entry.system.equipped && (!storageLocation(entry) ||
+        actorData.unassignedInventory = allStored.filter(entry => !entry.system.equipped && storageLocation(entry) !== STASH && (!storageLocation(entry) ||
             !actorData.inventoryGrids.some(grid => grid.id === storageLocation(entry)))).map(entry => ({
                 ...entry, canEquip: ['weapon', 'armor', 'item'].includes(entry.type), canUse: entry.type === 'consumable'
             }))
+        actorData.stashedInventory = allStored.filter(entry => storageLocation(entry) === STASH)
+        actorData.handLimit = HAND_LIMIT
+        actorData.handCount = handCount(this.actor)
+        actorData.handOverflow = actorData.handCount > HAND_LIMIT
         const selected = sheetData.items.find(entry => (entry._id ?? entry.id) === this._selectedInventoryItemId)
         actorData.selectedInventoryItem = selected ? { ...selected,
             canEquip: ['weapon', 'armor', 'item', 'backpack', 'rig'].includes(selected.type),
-            canUse: selected.type === 'consumable', stored: Boolean(storageLocation(selected)),
+            canUse: selected.type === 'consumable' && storageLocation(selected) !== STASH, stored: Boolean(storageLocation(selected)),
             canSplit: ['ammunition', 'consumable', 'item'].includes(selected.type) && Number(selected.system.qty) > 1,
             canDetach: selected.type === 'attachment' && Boolean(selected.system.installedWeaponId),
             canRotate: dimensions(selected).width !== dimensions(selected).height,
-            footprint: dimensions(selected)
+            footprint: dimensions(selected), inStash: storageLocation(selected) === STASH,
+            canStash: !inCombat(this.actor) && !selected.system.equipped && !selected.system.installedWeaponId &&
+                !selected.system.insertedInWeaponId && !['backpack','rig','quality','drawback','skill','power','aspect'].includes(selected.type) && storageLocation(selected) !== STASH,
+            equipCost: inCombat(this.actor) && ['weapon','backpack','rig'].includes(selected.type) ? 1 : 0,
+            retrievalCost: inventoryActionCost(this.actor, this.actor.items.get(selected._id ?? selected.id)),
+            storageOptions: containers(this.actor).filter(container => container.id === 'pockets' || container.equipped).map(container => ({
+                id: container.id, label: container.label,
+                helpCost: inventoryActionCost(this.actor, this.actor.items.get(selected._id ?? selected.id), container.id)
+            })),
         } : null
         actorData.attachment = attachment
         actorData.consumable = consumable
@@ -325,6 +341,10 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             try { await unpackItem(this.actor, this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)) }
             catch (error) { ui.notifications.warn(error.message) }
         })
+        html.find('.inventory-stash').click(async event => {
+            try { await stashItem(this.actor, this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)) }
+            catch (error) { ui.notifications.warn(error.message) }
+        })
         html.find('.inventory-rotate').click(async event => {
             const item = this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)
             try { await this._rotateInventoryItem(item) }
@@ -410,7 +430,9 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             name: game.i18n.format("AFMBE.Items.New", { type: typeLabel }),
             type: typeKey,
             cost: 0,
-            level: 0
+            level: 0,
+            ...(!['backpack', 'rig', 'quality', 'drawback', 'skill', 'power', 'aspect'].includes(typeKey) ?
+                { system: { storage: { containerId: STASH, x: 0, y: 0, rotated: false } } } : {})
         }
         return Item.create(itemData, { parent: this.actor })
     }
@@ -1089,9 +1111,15 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             throw new Error('Only two weapons can be equipped. Unequip one first.')
         if (equipped && ['backpack', 'rig'].includes(item.type) && this.actor.items.filter(entry => entry.type === item.type && entry.system.equipped && entry.id !== item.id).length)
             throw new Error(`Only one ${item.type} can be worn at a time.`)
-        if (equipped && storageLocation(item)) await unpackItem(this.actor, item)
+        if (equipped && storageLocation(item) === STASH) throw new Error('Retrieve this item from your off-character stash first.')
+        if (!equipped && item.system.equipped && ['weapon', 'armor', 'item'].includes(item.type) && handCount(this.actor) >= HAND_LIMIT)
+            throw new Error('Both hands are occupied. Pack or stash something before unequipping this item.')
+        const fromBackpack = equipped && this.actor.items.get(storageLocation(item))?.type === 'backpack'
+        if (equipped && storageLocation(item) && !fromBackpack) await unpackItem(this.actor, item)
         if (inCombat(this.actor) && ['weapon', 'backpack', 'rig'].includes(item.type)) await spendAction(this.actor, 'help')
-        await item.update({ 'system.equipped': equipped })
+        else if (inCombat(this.actor) && fromBackpack) await spendAction(this.actor, 'help')
+        await item.update({ 'system.equipped': equipped,
+            ...(fromBackpack ? { 'system.storage.containerId': '', 'system.storage.x': 0, 'system.storage.y': 0 } : {}) })
     }
 
     _inventoryDropPosition(grid, item, pointer, rotated) {
@@ -1149,10 +1177,12 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             add('Detach from weapon', () => removeAttachment(this.actor, item))
         if (dimensions(item).width !== dimensions(item).height)
             add('Rotate 90°', () => this._rotateInventoryItem(item))
-        if (storageLocation(item)) add('Take out', () => unpackItem(this.actor, item))
+        if (storageLocation(item)) add(`${storageLocation(item) === STASH ? 'Take from stash' : 'Take out'}${inventoryActionCost(this.actor, item) ? ' (1 Help)' : ''}`, () => unpackItem(this.actor, item))
+        if (storageLocation(item) !== STASH && !inCombat(this.actor) && !item.system.equipped && !item.system.insertedInWeaponId && !item.system.installedWeaponId)
+            add('Move to off-character stash', () => stashItem(this.actor, item))
         for (const container of containers(this.actor)) {
             if (container.type && !container.equipped) continue
-            add(`Put in ${container.label}`, async () => {
+            add(`Put in ${container.label}${inventoryActionCost(this.actor, item, container.id) ? ' (1 Help)' : ''}`, async () => {
                 const cell = firstFreeCell(this.actor, item, container.id)
                 if (!cell) throw new Error(`No available space in ${container.label}.`)
                 await moveInventoryItem(this.actor, item, container.id, cell.x, cell.y)

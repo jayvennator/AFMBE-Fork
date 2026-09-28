@@ -1,10 +1,26 @@
 import { spendAction } from './action-economy.js';
 
 export const POCKETS = Object.freeze({ id: 'pockets', label: 'Pockets', width: 2, height: 2, maxWeight: 3 });
+export const STASH = 'stash';
+export const HAND_LIMIT = 2;
 const integer = (n, fallback = 0) => Number.isSafeInteger(Number(n)) ? Number(n) : fallback;
 const clamp = (n, min, max, fallback) => Math.max(min, Math.min(max, integer(n, fallback)));
 export const itemWeight = item => Math.max(0, Number(item.system.encumbrance) || 0) * Math.max(0, integer(item.system.qty, 1));
 export const storageLocation = item => String(item?.system?.storage?.containerId ?? '');
+export const isStashed = (actor, item) => storageLocation(item) === STASH ||
+    Boolean((item.system.insertedInWeaponId || item.system.installedWeaponId) &&
+        storageLocation(actor.items.get(item.system.insertedInWeaponId || item.system.installedWeaponId)) === STASH);
+export const isPhysicalItem = item => !['backpack', 'rig', 'skill', 'quality', 'drawback', 'power', 'aspect'].includes(item.type);
+export const isLooseItem = item => isPhysicalItem(item) && !(item.type === 'ammunition' && Number(item.system.qty) <= 0) &&
+    !item.system.equipped && !storageLocation(item) &&
+    !(item.type === 'magazine' && item.system.insertedInWeaponId) &&
+    !(item.type === 'attachment' && item.system.installedWeaponId);
+export const handCount = actor => actor.items.filter(isLooseItem).length;
+export function inventoryActionCost(actor, item, targetId = '') {
+    if (!inCombat(actor)) return 0;
+    const old = storageLocation(item);
+    return actor.items.get(old)?.type === 'backpack' || actor.items.get(targetId)?.type === 'backpack' ? 1 : 0;
+}
 export function dimensions(item, rotated = Boolean(item.system.storage?.rotated)) {
     const width = clamp(item.system.gridSize?.width, 1, 8, 1);
     const height = clamp(item.system.gridSize?.height, 1, 8, 1);
@@ -23,6 +39,7 @@ export function inCombat(actor) {
 }
 export function quickAccess(actor, item) {
     if (!item || item.parent?.uuid !== actor.uuid) return false;
+    if (isStashed(actor, item)) return false;
     if (!inCombat(actor)) return true;
     if (item.type === 'weapon') return Boolean(item.system.equipped && !storageLocation(item));
     if (item.type === 'armor') return Boolean(item.system.equipped && !storageLocation(item));
@@ -36,6 +53,7 @@ export function canCarryQuick(item) {
 }
 export function placementError(actor, item, targetId, x, y, rotated = Boolean(item?.system.storage?.rotated)) {
     if (!actor?.isOwner || !item || item.parent?.uuid !== actor.uuid) return 'Item is unavailable.';
+    if (storageLocation(item) === STASH && inCombat(actor)) return 'Stashed gear is off character and cannot be retrieved in combat.';
     const target = ownedContainer(actor, targetId);
     if (!target) return 'Equip a backpack or rig before placing items in it.';
     if (target.id !== 'pockets' && !target.equipped) return 'Equip this backpack or rig first.';
@@ -87,20 +105,32 @@ export async function moveInventoryItem(actor, item, targetId, x, y, rotated = B
     if (old === targetId && Number(item.system.storage?.x) === x && Number(item.system.storage?.y) === y &&
         Boolean(item.system.storage?.rotated) === Boolean(rotated)) return;
     // Packing or retrieving from a backpack is deliberate; items in rigs and pockets stay ready.
-    if (inCombat(actor) && (actor.items.get(old)?.type === 'backpack' || actor.items.get(targetId)?.type === 'backpack')) await spendAction(actor, 'help');
+    const cost = inventoryActionCost(actor, item, targetId);
+    if (cost) await spendAction(actor, 'help');
     await item.update({ 'system.storage.containerId': targetId, 'system.storage.x': x,
         'system.storage.y': y, 'system.storage.rotated': Boolean(rotated),
         ...(Object.hasOwn(item.system, 'equipped') ? { 'system.equipped': false } : {}) });
-    if (inCombat(actor) && (actor.items.get(old)?.type === 'backpack' || actor.items.get(targetId)?.type === 'backpack'))
+    if (cost)
         await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<p>${foundry.utils.escapeHTML(actor.name)} moves ${foundry.utils.escapeHTML(item.name)} between backpack and ready storage (Help action).</p>` });
 }
 export async function unpackItem(actor, item) {
     if (!actor?.isOwner || item?.parent?.uuid !== actor.uuid) return;
     const old = storageLocation(item);
-    if (inCombat(actor) && actor.items.get(old)?.type === 'backpack') await spendAction(actor, 'help');
+    if (!old) return;
+    if (old === STASH && inCombat(actor)) throw new Error('Stashed gear is off character and cannot be retrieved in combat.');
+    if (handCount(actor) >= HAND_LIMIT) throw new Error(`Both hands are occupied (${HAND_LIMIT}/${HAND_LIMIT}). Pack or stash loose gear first.`);
+    const cost = inventoryActionCost(actor, item);
+    if (cost) await spendAction(actor, 'help');
     await item.update({ 'system.storage.containerId': '', 'system.storage.x': 0, 'system.storage.y': 0 });
-    if (inCombat(actor) && actor.items.get(old)?.type === 'backpack')
+    if (cost)
         await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<p>${foundry.utils.escapeHTML(actor.name)} retrieves ${foundry.utils.escapeHTML(item.name)} from a backpack (Help action).</p>` });
+}
+export async function stashItem(actor, item) {
+    if (!actor?.isOwner || item?.parent?.uuid !== actor.uuid || !isPhysicalItem(item)) throw new Error('This item cannot be stashed.');
+    if (inCombat(actor)) throw new Error('Your off-character stash is unavailable in combat.');
+    if (item.system.equipped || item.system.insertedInWeaponId || item.system.installedWeaponId)
+        throw new Error('Unequip, unload, or detach this item before stashing it.');
+    await item.update({ 'system.storage.containerId': STASH, 'system.storage.x': 0, 'system.storage.y': 0 });
 }
 export async function splitInventoryStack(actor, item) {
     if (!actor?.isOwner || item?.parent?.uuid !== actor.uuid || !['ammunition','consumable','item'].includes(item.type))
@@ -112,7 +142,7 @@ export async function splitInventoryStack(actor, item) {
     const copy = item.toObject();
     delete copy._id;
     copy.system.qty = amount;
-    copy.system.storage = { containerId: '', x: 0, y: 0, rotated: false };
+    copy.system.storage = { containerId: STASH, x: 0, y: 0, rotated: false };
     await actor.createEmbeddedDocuments('Item', [copy]);
     await item.update({ 'system.qty': quantity - amount });
 }

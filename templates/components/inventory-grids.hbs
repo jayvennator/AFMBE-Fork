@@ -1,17 +1,18 @@
 <div class="item-table">
     <h2>Pockets and containers</h2>
-    <p>Click an item for actions, including Rotate. Drag it between grids; the highlighted space shows where it will land. Hold Shift while dragging to rotate temporarily. Retrieving from a backpack costs a Help action in combat.</p>
+    <p>Click an item for actions. Drag it between grids; hold Shift while dragging to rotate. In combat, moving gear into or out of a backpack costs one Help action. Equipping a weapon from a backpack takes one Help action total. Off-character stash is only available outside combat.</p>
     <div class="afmbe-selected-item">
     {{#if actor.selectedInventoryItem}}
         <div class="item" data-item-id="{{actor.selectedInventoryItem._id}}"><strong>{{actor.selectedInventoryItem.name}}</strong>
-        {{#if actor.selectedInventoryItem.canEquip}}<button type="button" class="inventory-equip">{{#if actor.selectedInventoryItem.system.equipped}}Unequip{{else}}Equip{{/if}}</button>{{/if}}
+        {{#if actor.selectedInventoryItem.canEquip}}{{#unless actor.selectedInventoryItem.inStash}}<button type="button" class="inventory-equip" title="{{#if actor.selectedInventoryItem.equipCost}}Costs one Help action in combat{{/if}}">{{#if actor.selectedInventoryItem.system.equipped}}Unequip{{else}}Equip{{/if}}{{#if actor.selectedInventoryItem.equipCost}} (1 Help){{/if}}</button>{{/unless}}{{/if}}
         {{#if actor.selectedInventoryItem.canUse}}<button type="button" class="use-consumable">Use</button>{{/if}}
         {{#if actor.selectedInventoryItem.canRotate}}<button type="button" class="inventory-rotate" title="Turn this item 90 degrees">Rotate ↻</button>{{/if}}
         {{#if actor.selectedInventoryItem.canDetach}}<button type="button" class="inventory-detach">Detach from weapon</button>{{/if}}
-        {{#if actor.selectedInventoryItem.stored}}<button type="button" class="inventory-unpack">Take out</button>{{/if}}
+        {{#if actor.selectedInventoryItem.stored}}<button type="button" class="inventory-unpack">{{#if actor.selectedInventoryItem.inStash}}Take from stash{{else}}Take out{{#if actor.selectedInventoryItem.retrievalCost}} (1 Help){{/if}}{{/if}}</button>{{/if}}
+        {{#if actor.selectedInventoryItem.canStash}}<button type="button" class="inventory-stash">To off-character stash</button>{{/if}}
         {{#if actor.selectedInventoryItem.canSplit}}<button type="button" class="inventory-split">Split stack</button>{{/if}}
-        {{#each actor.inventoryGrids as |container|}}
-        {{#if container.equipped}}<button type="button" class="inventory-autopack" data-container-id="{{container.id}}">To {{container.label}}</button>{{else}}{{#unless container.type}}<button type="button" class="inventory-autopack" data-container-id="{{container.id}}">To pockets</button>{{/unless}}{{/if}}
+        {{#each actor.selectedInventoryItem.storageOptions as |container|}}
+        <button type="button" class="inventory-autopack" data-container-id="{{container.id}}">To {{container.label}}{{#if container.helpCost}} (1 Help){{/if}}</button>
         {{/each}}
         <button type="button" class="inventory-open">Item details</button>
         <small>Size {{actor.selectedInventoryItem.footprint.width}}×{{actor.selectedInventoryItem.footprint.height}}</small></div>
@@ -31,7 +32,7 @@
     <button type="button" class="create-item" data-create="rig">+ Combat rig</button>
 </div>
 {{#each actor.inventoryGrids as |container|}}
-<div class="item-table"><h3>{{container.label}} ({{container.width}}×{{container.height}}{{#if container.maxWeight}}, max {{container.maxWeight}} lb{{/if}}){{#if container.type}}{{#unless container.equipped}} — not worn{{/unless}}{{/if}}</h3>
+<div class="item-table"><h3>{{container.label}} ({{container.width}}×{{container.height}}{{#if container.maxWeight}}, max {{container.maxWeight}} lb{{/if}}){{#if container.type}}{{#unless container.equipped}} — not worn{{/unless}}{{/if}}</h3><small>{{container.usedCells}} / {{container.cells.length}} cells · {{container.usedWeight}}{{#if container.maxWeight}} / {{container.maxWeight}}{{/if}} lb</small>
 <div class="afmbe-inventory-grid" data-container-id="{{container.id}}" data-width="{{container.width}}" style="--inventory-columns:{{container.width}};--inventory-rows:{{container.height}}">
     {{#each container.cells as |cell|}}
     <div class="inventory-grid-cell" data-container-id="{{container.id}}" data-x="{{cell.x}}" data-y="{{cell.y}}" style="grid-column:{{cell.column}};grid-row:{{cell.row}}"></div>
@@ -43,8 +44,13 @@
     <div class="inventory-grid-preview" hidden></div>
 </div></div>
 {{/each}}
-<div class="item-table"><h3>Loose gear</h3><p>Items here have no quick-access slot. Equip weapons or armor; put small supplies in pockets or the rig.</p>
+<div class="item-table"><h3>In hands ({{actor.handCount}} / {{actor.handLimit}})</h3><p>Hold up to two loose items while arranging gear. Items in your hands are carried, but have no quick-access slot in combat.{{#if actor.handOverflow}} <strong>Existing gear exceeds the hand limit; pack or stash the excess.</strong>{{/if}}</p>
 {{#each actor.unassignedInventory as |item|}}
+<div class="item afmbe-loose-item" data-item-id="{{item._id}}">{{item.name}}</div>
+{{/each}}
+</div>
+<div class="item-table"><h3>Off-character stash</h3><p>Gear left at your stash does not count toward carrying weight and cannot be used in combat. The stash follows this character; it has no map location yet.</p>
+{{#each actor.stashedInventory as |item|}}
 <div class="item afmbe-loose-item" data-item-id="{{item._id}}">{{item.name}}</div>
 {{/each}}
 </div>

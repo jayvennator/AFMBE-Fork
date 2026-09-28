@@ -29,7 +29,9 @@ async function announceCrash(actor, effects) {
 export async function useConsumable(item) {
     const actor = item?.parent;
     if (item?.type !== 'consumable' || !actor?.isOwner) return;
-    if (!quickAccess(actor, item)) return ui.notifications.warn('Move this consumable to pockets or a worn rig before using it in combat.');
+    if (!quickAccess(actor, item)) return ui.notifications.warn(item.system.storage?.containerId === 'stash'
+        ? 'Retrieve this consumable from your off-character stash first.'
+        : 'Move this consumable to pockets or a worn rig before using it in combat.');
     const qty = Number(item.system.qty);
     if (!Number.isInteger(qty) || qty < 1) return ui.notifications.warn('No consumables remaining.');
     const heal = Number(item.system.healing || 0);
