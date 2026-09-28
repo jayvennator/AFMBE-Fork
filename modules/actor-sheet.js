@@ -16,7 +16,7 @@ import { attachmentModifiers, promptInstallAttachment, removeAttachment } from '
 import { SKILL_CATEGORIES, skillCategory } from './skill-categories.js';
 import { containers, dimensions, firstFreeCell, nearestFreeCell, moveInventoryItem, unpackItem, splitInventoryStack, stashItem, storageLocation, inCombat, handCount, HAND_LIMIT, STASH, inventoryActionCost, itemWeight } from './inventory-grid.js';
 import { loadedMagazine, compatibleMagazines, reloadWeapon, loadMagazine, unloadMagazine } from './magazines.js';
-import { coverForAttack } from './tile-cover.js';
+import { coverForAttack } from './region-cover.js';
 
 export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
 
@@ -901,7 +901,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             </select></div>` : ''}
             ${category === 'firearm' ? `<div class="form-group"><label>Firing mode</label><select name="fireMode">${modeOptions}</select></div>` : ''}
             ${isMelee ? '' : `<div class="form-group"><label>Target cover</label><select name="cover">
-                <option value="auto">Auto (marked tiles)</option><option value="none">None</option><option value="partial">Partial (−1d4)</option><option value="full">Full (−1d8)</option>
+                <option value="auto">Auto (marked Regions)</option><option value="none">None</option><option value="partial">Partial (−1d4)</option><option value="full">Full (−1d8)</option>
             </select></div>`}
             <p class="afmbe-attack-summary" aria-live="polite">${escape(firstSummary)}</p>
             <details ${defaultLocation !== 'body' ? 'open' : ''}><summary>Adjust attack (target, traits, modifier)</summary>
@@ -1042,7 +1042,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                     const locationName = form.elements.location.selectedOptions[0].textContent
                     const ammoNote = feed === 'direct' ? `<p>1 ${escape(looseProjectile.name)} used; ${looseProjectile.system.qty} remain.</p>` : hasMagazine ? `<p>${firing.rounds} ${escape(firedDamageType)} round(s) fired; ${weapon.system.capacity.value}/${weapon.system.capacity.max} remaining.</p>` : ''
                     const rangeDetail = isMelee ? `melee swing ${meleeStrike.swing}/${meleePreview(this.actor, weapon).limit}; strain ${meleeStrike.strainPenalty}; Endurance spent ${meleeStrike.enduranceSpent}` : `shot ${gunShot.shot} this turn (${gunShot.shotsInAction}/${gunShot.rateOfFire} this action), recoil ${gunShot.recoilPenalty}; ` + (range.note ? 'range unconfigured (0)' : `range ${range.penalty} (${range.distance.toFixed(1)} m / ${range.normalRange} m)` )
-                    const coverDetail = coverRoll ? `${cover} cover${detectedCover?.tile ? ` (tile ${escape(detectedCover.tile.id)})` : ''} −1d${cover === 'partial' ? 4 : 8} (${coverPenalty})` : coverChoice === 'auto' ? 'auto cover: none' : 'cover: none'
+                    const coverDetail = coverRoll ? `${cover} cover${detectedCover?.region ? ` (Region ${escape(detectedCover.region.name ?? detectedCover.region.id)})` : ''} −1d${cover === 'partial' ? 4 : 8} (${coverPenalty})` : coverChoice === 'auto' ? 'auto cover: none' : 'cover: none'
                     const content = `<h2>${escape(weapon.name)}</h2><div class="afmbe-roll-kind">Attack</div><p>${escape(attributeKey)} ${attribute}, ${escape(skill?.name ?? 'No skill')} ${skillLevel}, ${escape(locationName)}, modifier ${modifier}, traits ${traitSummary(automatic, quality, drawback, escape)}, ${isMelee ? 'melee' : 'ammo'} ${ammoHitBonus >= 0 ? "+" : ""}${ammoHitBonus}, attachments ${attachments.attack >= 0 ? '+' : ''}${attachments.attack}${attachments.items.length ? ` (${attachments.items.map(item => escape(item.name)).join(', ')})` : ''}, ${rangeDetail}, mode ${firing.mode} ${firing.penalty}, action ${action.penalty}, ${coverDetail}</p><p>Roll ${roll.total} + modifiers = <strong>${total}</strong> vs 9 — <strong>${success ? `Hit (${degrees} degree${degrees === 1 ? '' : 's'}; ${hits} of ${firing.rounds} rounds hit)` : 'Miss'}</strong></p>${ammoNote}`
                     await ChatMessage.create({ user: game.user.id, speaker: ChatMessage.getSpeaker({ actor: this.actor }),
                         content: content + `<p>${success ? `Awaiting ${escape(target.name)}’s defense.` : 'Attack misses; no damage roll.'}</p>`, rolls: coverRoll ? [roll, coverRoll] : [roll],
