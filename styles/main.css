@@ -388,6 +388,28 @@
     text-align: center;
 }
 
+.afmbe-left-behind .afmbe-health-summary,
+.afmbe-left-behind .afmbe-health-panel {
+    padding: 0.45rem;
+    border: 1px solid #7778;
+    border-radius: 5px;
+    background: rgba(95, 101, 108, 0.08);
+}
+.afmbe-left-behind .afmbe-health-summary > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid #7775;
+}
+.afmbe-left-behind .afmbe-health-summary span { text-align: right; }
+.afmbe-left-behind .afmbe-health-alert { color: #a22; font-weight: bold; }
+.afmbe-left-behind .afmbe-health-panel { display: grid; gap: 0.7rem; }
+.afmbe-left-behind .afmbe-health-panel > h2,
+.afmbe-left-behind .afmbe-health-panel > p { margin: 0; }
+.afmbe-left-behind .afmbe-health-panel .attribute-container,
+.afmbe-left-behind .afmbe-health-panel .afmbe-active-effects { width: 100%; }
+
 .afmbe-left-behind .sheet-body {
     display: flex;
     flex-direction: column;

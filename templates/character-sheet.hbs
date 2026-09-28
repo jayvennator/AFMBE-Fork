@@ -11,7 +11,7 @@
                             <input class="charname" type="text" name="name" value="{{actor.name}}" placeholder="{{localize 'AFMBE.Common.Name'}}">
                         </h1>
                         {{> "systems/afmbe-left-behind/templates/components/primary-attributes.hbs"}}
-                        {{> "systems/afmbe-left-behind/templates/components/secondary-attributes.hbs"}}
+                        {{> "systems/afmbe-left-behind/templates/components/health-summary.hbs"}}
                         {{> "systems/afmbe-left-behind/templates/components/action-economy.hbs"}}
                         {{#unless actor.actionEconomy}}<button type="button" class="take-cover">Take / leave cover</button>{{/unless}}
                     </div>
@@ -19,6 +19,14 @@
             </div>
         </div>
         <section class="sheet-body">
+            <div class="tab health" data-group="primary" data-tab="health">
+                <div class="afmbe-health-panel">
+                    <h2>Health &amp; recovery</h2>
+                    <p>Manage current resources, injuries, and ongoing effects here. Leg injuries halve combat movement until treated.</p>
+                    {{> "systems/afmbe-left-behind/templates/components/secondary-attributes.hbs"}}
+                    {{> "systems/afmbe-left-behind/templates/components/active-effects.hbs"}}
+                </div>
+            </div>
 
             {{!-- Core Tab --}}
             <div class="tab core" data-group="primary" data-tab="core">

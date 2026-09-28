@@ -1,0 +1,8 @@
+<div class="afmbe-health-summary">
+    <h2>Vitals</h2>
+    <div><strong>HP</strong><span>{{actor.system.secondaryAttributes.hp.value}} / {{actor.system.secondaryAttributes.hp.max}}</span></div>
+    <div><strong>Endurance</strong><span>{{actor.system.secondaryAttributes.endurance_points.value}} / {{actor.system.secondaryAttributes.endurance_points.max}}</span></div>
+    <div><strong>Essence</strong><span>{{actor.system.secondaryAttributes.essence.value}} / {{actor.system.secondaryAttributes.essence.max}}</span></div>
+    <div><strong>Speed</strong><span>{{actor.system.secondaryAttributes.speed.halfValue}} m/sec</span></div>
+    {{#if actor.legInjury}}<p class="afmbe-health-alert">Leg Injury · combat movement halved</p>{{/if}}
+</div>

@@ -4,6 +4,7 @@ export function registerTemplates() {
         //Sheet Components
         "systems/afmbe-left-behind/templates/components/primary-attributes.hbs",
         "systems/afmbe-left-behind/templates/components/secondary-attributes.hbs",
+        "systems/afmbe-left-behind/templates/components/health-summary.hbs",
         "systems/afmbe-left-behind/templates/components/aspects.hbs",
         "systems/afmbe-left-behind/templates/components/biography.hbs",
         "systems/afmbe-left-behind/templates/components/drawbacks.hbs",
