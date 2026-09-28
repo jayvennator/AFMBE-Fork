@@ -1,5 +1,6 @@
 import { SKILL_CATEGORIES, skillCategory } from './skill-categories.js';
 import { toggleCoverStance } from './region-cover.js';
+import { hasLegInjury, clearLegInjury, treatLegInjury } from './leg-injury.js';
 
 export class afmbeCreatureSheet extends foundry.appv1.sheets.ActorSheet {
 
@@ -24,6 +25,7 @@ export class afmbeCreatureSheet extends foundry.appv1.sheets.ActorSheet {
 
     getData() {
         const data = super.getData();
+        data.actor.legInjury = hasLegInjury(this.actor);
         data.isGM = game.user.isGM;
         data.editable = data.options.editable;
         const actorData = data.system;
@@ -115,6 +117,12 @@ export class afmbeCreatureSheet extends foundry.appv1.sheets.ActorSheet {
         html.find('.take-cover').click(async () => {
             try { await toggleCoverStance(this.actor); }
             catch (error) { ui.notifications.warn(error.message); }
+        })
+        html.find('.clear-leg-injury').click(async () => {
+            try { await clearLegInjury(this.actor); } catch (error) { ui.notifications.warn(error.message); }
+        })
+        html.find('.treat-leg-injury').click(async () => {
+            try { await treatLegInjury(this.actor); } catch (error) { ui.notifications.warn(error.message); }
         })
         if (this.actor.isOwner) html.find('.damage-roll').click(this._onDamageRoll.bind(this))
         html.find('.toggleEquipped').click(this._onToggleEquipped.bind(this))

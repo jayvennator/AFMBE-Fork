@@ -19,6 +19,7 @@ import { loadedMagazine, compatibleMagazines, reloadWeapon, loadMagazine, unload
 import { coverForAttack, toggleCoverStance } from './region-cover.js';
 import { beginSuppressiveCone } from './suppressive-fire.js';
 import { movementPanel, attemptDash } from './combat-movement.js';
+import { hasLegInjury, treatLegInjury, clearLegInjury } from './leg-injury.js';
 
 export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
 
@@ -226,6 +227,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         })
         actorData.actionEconomy = actionPanel(this.actor)
         actorData.movement = movementPanel(this.actor)
+        actorData.legInjury = hasLegInjury(this.actor)
         actorData.activeConsumables = activeBonuses(this.actor).map(effect => ({ ...effect, willCrash: effect.phase !== "crash" && Number(effect.crashPenalty) > 0 && Number(effect.crashDuration) > 0 }))
         actorData.power = power
         actorData.quality = quality
@@ -416,6 +418,12 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         html.find('.dash-action').click(async () => {
             try { await attemptDash(this.actor); }
             catch (error) { ui.notifications.warn(error.message); }
+        });
+        html.find('.treat-leg-injury').click(async () => {
+            try { await treatLegInjury(this.actor); } catch (error) { ui.notifications.warn(error.message); }
+        });
+        html.find('.clear-leg-injury').click(async () => {
+            try { await clearLegInjury(this.actor); } catch (error) { ui.notifications.warn(error.message); }
         });
         html.find('.spend-action').click(async event => {
             const type = event.currentTarget.dataset.actionType;

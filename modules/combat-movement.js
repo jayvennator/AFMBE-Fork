@@ -1,6 +1,7 @@
 import { actionState, spendAction } from './action-economy.js';
 import { attributeBonus } from './consumables.js';
 import { traitRollEffects } from './trait-effects.js';
+import { legMovementAllowance, hasLegInjury } from './leg-injury.js';
 
 const SYSTEM = 'afmbe-left-behind';
 const pending = new Map();
@@ -26,13 +27,12 @@ export function movementPanel(actor) {
         ?? canvas?.tokens?.placeables?.find(entry => entry.actor?.uuid === actor.uuid)?.document;
     const ctx = context(token);
     if (!ctx) return null;
-    const speed = meters(actor.system.secondaryAttributes?.speed?.halfValue);
-    const allowance = Math.floor(speed);
+    const allowance = legMovementAllowance(actor);
     const stored = token.getFlag(SYSTEM, 'combatMovement') ?? {};
     const traveled = stored.key === ctx.key ? meters(stored.distance) : 0;
     const dash = actor.getFlag(SYSTEM, 'dash') ?? {};
     const successes = dash.key === ctx.key ? dashSuccesses(dash) : 0;
-    return { allowance, traveled: round(traveled), remaining: round(Math.max(0, allowance * (1 + successes) - traveled)),
+    return { allowance, legInjury: hasLegInjury(actor), traveled: round(traveled), remaining: round(Math.max(0, allowance * (1 + successes) - traveled)),
         dashSuccesses: successes, nextDashPenalty: -2 * (dash.key === ctx.key ? Number(dash.attempts) || 0 : 0),
         dashFailed: dash.key === ctx.key && Boolean(dash.failed), active: ctx.active };
 }
@@ -76,7 +76,7 @@ export function registerCombatMovement() {
         if (!distance) return;
         const stored = token.getFlag(SYSTEM, 'combatMovement') ?? {};
         const traveled = stored.key === ctx.key ? meters(stored.distance) : 0;
-        const allowance = Math.floor(meters(ctx.actor.system.secondaryAttributes?.speed?.halfValue));
+        const allowance = legMovementAllowance(ctx.actor);
         const dash = ctx.actor.getFlag(SYSTEM, 'dash') ?? {};
         const successes = dash.key === ctx.key ? dashSuccesses(dash) : 0;
         const dashActive = successes > 0;
