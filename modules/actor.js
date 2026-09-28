@@ -223,8 +223,9 @@ export class afmbeActor extends Actor {
   _calculateEncumbrance(data) {
     let total = 0
     for (let item of this.items.filter(i => i.system.hasOwnProperty('encumbrance'))) {
-      let qty = item.system.qty != undefined ? item.system.qty : 1
-      total = total + (item.system.encumbrance * qty)
+      const qty = item.system.qty != undefined ? Number(item.system.qty) : 1
+      const weight = Number(item.system.encumbrance)
+      if (Number.isFinite(qty) && Number.isFinite(weight)) total += Math.max(0, weight) * Math.max(0, qty)
     }
 
     return total.toFixed(1)

@@ -13,6 +13,7 @@ import { promptArmorReplenishment } from './armor-replenishment.js';
 import { armorIntegrity } from './armor-integrity.js';
 import { attachmentModifiers, promptInstallAttachment, removeAttachment } from './attachments.js';
 import { SKILL_CATEGORIES, skillCategory } from './skill-categories.js';
+import { containers, dimensions, firstFreeCell, moveInventoryItem, unpackItem, splitInventoryStack, storageLocation, inCombat } from './inventory-grid.js';
 import { loadedMagazine, compatibleMagazines, reloadWeapon, loadMagazine } from './magazines.js';
 
 export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
@@ -56,6 +57,8 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         const item = [];
         const equippedItem = [];
         const armor = [];
+        const backpack = [];
+        const rig = [];
         const attachment = [];
         const consumable = [];
         const weapon = [];
@@ -82,6 +85,12 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                     i.hasInsertedMagazine = Boolean(i.system.loadedMagazineId)
                     i.canUnload = ["internal", "cylinder", "single"].includes(i.feed) && Number(i.system.capacity?.value) > 0
                     weapon.push(i)
+                    break
+                case "backpack":
+                    backpack.push(i)
+                    break
+                case "rig":
+                    rig.push(i)
                     break
 
                 case "magazine":
@@ -123,7 +132,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         }
 
         // Alphabetically sort all items
-        const itemCats = [item, equippedItem, weapon, armor, attachment, consumable, magazine, ammunition, power, quality, skill, drawback]
+        const itemCats = [item, equippedItem, weapon, armor, backpack, rig, attachment, consumable, magazine, ammunition, power, quality, skill, drawback]
         for (let category of itemCats) {
             if (category.length > 1) {
                 category.sort((a, b) => {
@@ -139,6 +148,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         actorData.item = item
         actorData.equippedItem = equippedItem
         actorData.weapon = weapon
+        actorData.readyWeapons = weapon.filter(entry => entry.system.equipped && !storageLocation(entry))
         actorData.meleeWeapons = weapon.filter(i => i.weaponCategory === "melee")
         actorData.firearms = weapon.filter(i => i.weaponCategory === "firearm")
         actorData.bows = weapon.filter(i => ["bow", "crossbow"].includes(i.weaponCategory))
@@ -146,8 +156,33 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         actorData.magazine = magazine
         actorData.ammunition = ammunition
         actorData.armor = armor
+        actorData.readyArmor = [...armor, ...equippedItem.filter(entry => String(entry.system.armor_value ?? '0') !== '0')]
+            .filter(entry => entry.system.equipped && !storageLocation(entry))
+        actorData.backpack = backpack
+        actorData.rig = rig
+        const allStored = sheetData.items.filter(entry => !['skill','quality','drawback','power','aspect','backpack','rig'].includes(entry.type) &&
+            !(entry.type === 'magazine' && entry.system.insertedInWeaponId) &&
+            !(entry.type === 'attachment' && entry.system.installedWeaponId))
+        actorData.inventoryGrids = containers(this.actor).map(container => ({
+            ...container,
+            cells: Array.from({ length: container.width * container.height }, (_, index) => ({ x: index % container.width, y: Math.floor(index / container.width) })),
+            contents: allStored.filter(entry => storageLocation(entry) === container.id).map(entry => {
+                const size = dimensions(entry)
+                return { id: entry._id ?? entry.id, name: entry.name, x: Number(entry.system.storage?.x) || 0,
+                    y: Number(entry.system.storage?.y) || 0, column: (Number(entry.system.storage?.x) || 0) + 1,
+                    row: (Number(entry.system.storage?.y) || 0) + 1, width: size.width, height: size.height,
+                    rotated: Boolean(entry.system.storage?.rotated) }
+            })
+        }))
+        actorData.unassignedInventory = allStored.filter(entry => !storageLocation(entry) ||
+            !actorData.inventoryGrids.some(grid => grid.id === storageLocation(entry)))
         actorData.attachment = attachment
         actorData.consumable = consumable
+        actorData.readyConsumables = consumable.filter(entry => {
+            const location = storageLocation(entry)
+            return location === 'pockets' || Boolean(this.actor.items.get(location)?.type === 'rig' &&
+                this.actor.items.get(location).system.equipped)
+        })
         actorData.actionEconomy = actionPanel(this.actor)
         actorData.activeConsumables = activeBonuses(this.actor).map(effect => ({ ...effect, willCrash: effect.phase !== "crash" && Number(effect.crashPenalty) > 0 && Number(effect.crashDuration) > 0 }))
         actorData.power = power
@@ -189,6 +224,64 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         html.find('.load-magazine').click(this._onLoadMagazine.bind(this))
         if (game.user.isGM) html.find('.damage-roll').click(this._onDamageRoll.bind(this))
         html.find('.toggleEquipped').click(this._onToggleEquipped.bind(this))
+        html.find('.toggle-weapon-equipped').click(async event => {
+            const weapon = this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)
+            if (!weapon?.isOwner || weapon.type !== 'weapon') return
+            if (!weapon.system.equipped && storageLocation(weapon)) return ui.notifications.warn('Remove the weapon from its backpack before equipping it.')
+            if (!weapon.system.equipped && this.actor.items.filter(item => item.type === 'weapon' && item.system.equipped).length >= 2)
+                return ui.notifications.warn('Unequip a weapon first (two ready weapons maximum).')
+            if (inCombat(this.actor)) {
+                try { await spendAction(this.actor, 'help') } catch (error) { return ui.notifications.warn(error.message) }
+            }
+            await weapon.update({ 'system.equipped': !weapon.system.equipped })
+        })
+        html.find('.inventory-view-button').click(event => {
+            const view = event.currentTarget.dataset.view
+            const sheet = event.currentTarget.closest('.equipment')
+            sheet?.querySelectorAll('.inventory-view').forEach(part => { part.style.display = part.dataset.view === view ? '' : 'none' })
+            sheet?.querySelectorAll('.inventory-view-button').forEach(button => button.classList.toggle('active', button.dataset.view === view))
+        })
+        html.find('.afmbe-inventory-grid').on('dragover', event => event.preventDefault())
+        html.find('.item').attr('draggable', 'true').on('dragstart', event => {
+            event.originalEvent.dataTransfer.setData('application/x-afmbe-item', event.currentTarget.closest('.item')?.dataset.itemId ?? '')
+        })
+        html.find('.afmbe-inventory-grid').on('drop', async event => {
+            event.preventDefault(); event.stopPropagation()
+            const source = this.actor.items.get(event.originalEvent.dataTransfer.getData('application/x-afmbe-item'))
+            const grid = event.currentTarget
+            if (!source) return
+            const rect = grid.getBoundingClientRect()
+            const x = Math.floor((event.originalEvent.clientX - rect.left) / (rect.width / Number(grid.dataset.width)))
+            const y = Math.floor((event.originalEvent.clientY - rect.top) / 38)
+            try { await moveInventoryItem(this.actor, source, grid.dataset.containerId, x, y, event.originalEvent.shiftKey) }
+            catch (error) { ui.notifications.warn(error.message) }
+        })
+        html.find('.inventory-autopack').click(async event => {
+            const item = this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)
+            const containerId = event.currentTarget.dataset.containerId
+            const cell = firstFreeCell(this.actor, item, containerId)
+            if (!cell) return ui.notifications.warn('No free space for this item in that container.')
+            try { await moveInventoryItem(this.actor, item, containerId, cell.x, cell.y) }
+            catch (error) { ui.notifications.warn(error.message) }
+        })
+        html.find('.inventory-unpack').click(async event => {
+            try { await unpackItem(this.actor, this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)) }
+            catch (error) { ui.notifications.warn(error.message) }
+        })
+        html.find('.inventory-split').click(async event => {
+            try { await splitInventoryStack(this.actor, this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)) }
+            catch (error) { ui.notifications.warn(error.message) }
+        })
+        html.find('.toggle-container-equipped').click(async event => {
+            const item = this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)
+            if (!item?.isOwner || !['backpack','rig'].includes(item.type)) return
+            if (!item.system.equipped && this.actor.items.filter(other => other.id !== item.id && other.type === item.type && other.system.equipped).length)
+                return ui.notifications.warn(`Only one worn ${item.type} at a time. Unequip the other first.`)
+            if (inCombat(this.actor)) {
+                try { await spendAction(this.actor, 'help') } catch (error) { return ui.notifications.warn(error.message) }
+            }
+            await item.update({ 'system.equipped': !item.system.equipped })
+        })
         html.find('.armor-button-cell button').click(this._onArmorRoll.bind(this))
         html.find('.replenish-armor').click(event => promptArmorReplenishment(this.actor, this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)))
         html.find('.use-consumable').click(event => useConsumable(this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)))
@@ -225,6 +318,9 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         // Delete Inventory Item
         html.find('.item-delete').click(ev => {
             const li = ev.currentTarget.closest(".item");
+            const removed = this.actor.items.get(li.dataset.itemId);
+            if (['backpack','rig'].includes(removed?.type) && this.actor.items.filter(entry => storageLocation(entry) === removed.id).length)
+                return ui.notifications.warn('Empty this container before deleting it.');
             this.actor.deleteEmbeddedDocuments("Item", [li.dataset.itemId]);
         });
     }
@@ -593,6 +689,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         const weaponId = event.currentTarget.closest('.item')?.dataset.itemId
         const weapon = this.actor.items.get(weaponId)
         if (!weapon) return
+        if (!weapon.system.equipped || storageLocation(weapon)) return ui.notifications.warn('Equip this weapon before attacking.')
 
         const attributes = this.actor.system.primaryAttributes ?? {}
         const skills = this.actor.items.filter(item => item.type === 'skill')
@@ -919,6 +1016,8 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         event.preventDefault()
         let element = event.currentTarget
         let equippedItem = this.actor.getEmbeddedDocument("Item", element.closest('.item').dataset.itemId)
+        if (!equippedItem || (!equippedItem.system.equipped && storageLocation(equippedItem)))
+            return ui.notifications.warn('Take this item out of storage before equipping it.')
 
         switch (equippedItem.system.equipped) {
             case true:

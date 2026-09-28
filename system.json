@@ -2,7 +2,7 @@
   "id": "afmbe-left-behind",
   "title": "AFMBE: Left Behind",
   "description": "A digital system for playing AFMBE (All Flesh Must Be Eaten) by Eden Studios",
-  "version": "1.2.1-test.32",
+  "version": "1.2.1-test.33",
   "esmodules": [
     "modules/main.js"
   ],

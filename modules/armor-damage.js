@@ -1,5 +1,6 @@
 import { resolveDamage, damageType } from './damage-types.js';
 import { armorIntegrity, armorWear } from './armor-integrity.js';
+import { storageLocation } from './inventory-grid.js';
 const SYSTEM_ID = 'afmbe-left-behind';
 const applying = new Set();
 
@@ -49,7 +50,7 @@ export async function applyArmorDamage(message) {
             let protection = 0;
             let coveringItems = 0;
             for (const item of actor.items) {
-                if (!['item', 'armor'].includes(item.type) || !item.system.equipped) continue;
+                if (!['item', 'armor'].includes(item.type) || !item.system.equipped || storageLocation(item)) continue;
                 const coverage = item.system.armor_coverage ?? { body: true };
                 if (!coverage[location]) continue;
                 const state = integrity.get(item.id) ?? armorIntegrity(item);

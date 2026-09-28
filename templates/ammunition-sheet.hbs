@@ -5,4 +5,5 @@
 <tr><th>Ammunition type</th><td><select name="system.ammoType">{{#selectOptions ammoDamageTypes selected=item.system.ammoType}}{{/selectOptions}}</select></td></tr>
 <tr><th>Loose rounds</th><td><input name="system.qty" type="number" min="0" step="1" value="{{item.system.qty}}"></td></tr>
 <tr><th>Encumbrance</th><td><input name="system.encumbrance" type="number" min="0" step="any" value="{{item.system.encumbrance}}"></td></tr>
+{{> "systems/afmbe-left-behind/templates/components/grid-fields.hbs"}}
 </tbody></table></div>{{> "systems/afmbe-left-behind/templates/components/item-description-sidebar.hbs"}}</section></form>

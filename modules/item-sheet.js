@@ -91,6 +91,27 @@ export class afmbeItemSheet extends foundry.appv1.sheets.ItemSheet {
                 ui.notifications.error('Could not convert the item. Check the actor inventory before retrying.');
             }
         });
+        html.find('.convert-to-container').click(async event => {
+            event.preventDefault();
+            const actor = this.item.parent;
+            const type = event.currentTarget.dataset.type;
+            if (!actor?.isOwner || this.item.type !== 'item' || !['backpack','rig'].includes(type)) return;
+            const converted = this.item.toObject();
+            delete converted._id;
+            converted.type = type;
+            converted.system.equipped = false;
+            converted.system.grid = type === 'rig'
+                ? { width: 4, height: 4, maxWeight: 12 } : { width: 6, height: 8, maxWeight: 40 };
+            if (type === 'backpack' && Number(this.item.system.encumbrance) < 0)
+                converted.system.grid.maxWeight = Math.max(1, Math.min(100, -Number(this.item.system.encumbrance)));
+            converted.system.encumbrance = Math.max(1, Number(this.item.system.encumbrance) || 0, type === 'rig' ? 4 : 3);
+            try {
+                const [container] = await actor.createEmbeddedDocuments('Item', [converted]);
+                await actor.deleteEmbeddedDocuments('Item', [this.item.id]);
+                await this.close();
+                container.sheet.render(true);
+            } catch (error) { console.error('AFMBE container conversion failed', error); ui.notifications.error(error.message); }
+        });
     }
 
     /* -------------------------------------------- */

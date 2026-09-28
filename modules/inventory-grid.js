@@ -1,0 +1,98 @@
+import { spendAction } from './action-economy.js';
+
+export const POCKETS = Object.freeze({ id: 'pockets', label: 'Pockets', width: 2, height: 2, maxWeight: 3 });
+const integer = (n, fallback = 0) => Number.isSafeInteger(Number(n)) ? Number(n) : fallback;
+const clamp = (n, min, max, fallback) => Math.max(min, Math.min(max, integer(n, fallback)));
+export const itemWeight = item => Math.max(0, Number(item.system.encumbrance) || 0) * Math.max(0, integer(item.system.qty, 1));
+export const storageLocation = item => String(item?.system?.storage?.containerId ?? '');
+export function dimensions(item, rotated = Boolean(item.system.storage?.rotated)) {
+    const width = clamp(item.system.gridSize?.width, 1, 8, 1);
+    const height = clamp(item.system.gridSize?.height, 1, 8, 1);
+    return rotated ? { width: height, height: width } : { width, height };
+}
+export function containers(actor) {
+    return [POCKETS, ...actor.items.filter(item => ['backpack', 'rig'].includes(item.type)).map(item => ({
+        id: item.id, label: item.name, width: clamp(item.system.grid?.width, 1, 12, item.type === 'rig' ? 4 : 6),
+        height: clamp(item.system.grid?.height, 1, 12, item.type === 'rig' ? 4 : 8),
+        maxWeight: Math.max(0, Number(item.system.grid?.maxWeight) || 0), type: item.type, equipped: Boolean(item.system.equipped)
+    }))];
+}
+export function ownedContainer(actor, id) { return containers(actor).find(container => container.id === id); }
+export function inCombat(actor) {
+    return Boolean(game.combat?.started && game.combat.combatants.some(entry => entry.actor?.uuid === actor.uuid));
+}
+export function quickAccess(actor, item) {
+    if (!item || item.parent?.uuid !== actor.uuid) return false;
+    if (!inCombat(actor)) return true;
+    if (item.type === 'weapon') return Boolean(item.system.equipped && !storageLocation(item));
+    if (item.type === 'armor') return Boolean(item.system.equipped && !storageLocation(item));
+    if (item.type === 'magazine' && item.system.insertedInWeaponId) return true;
+    const location = storageLocation(item);
+    return location === 'pockets' || Boolean(actor.items.get(location)?.type === 'rig' && actor.items.get(location).system.equipped);
+}
+export function canCarryQuick(item) {
+    return ['magazine', 'ammunition', 'consumable', 'attachment'].includes(item.type) ||
+        (item.type === 'item' && Boolean(item.system.quickAccess));
+}
+export function placementError(actor, item, targetId, x, y, rotated = false) {
+    if (!actor?.isOwner || !item || item.parent?.uuid !== actor.uuid) return 'Item is unavailable.';
+    const target = ownedContainer(actor, targetId);
+    if (!target) return 'Equip a backpack or rig before placing items in it.';
+    if (target.id !== 'pockets' && !target.equipped) return 'Equip this backpack or rig first.';
+    if (['backpack', 'rig', 'skill', 'quality', 'drawback', 'power', 'aspect'].includes(item.type)) return 'This item cannot go inside a container.';
+    if ((target.id === 'pockets' || target.type === 'rig') && !canCarryQuick(item)) return 'Only small supplies, magazines, and marked quick-access items fit here.';
+    const size = dimensions(item, rotated);
+    if (!Number.isSafeInteger(x) || !Number.isSafeInteger(y) || x < 0 || y < 0 || x + size.width > target.width || y + size.height > target.height) return 'The item does not fit within this grid.';
+    const limit = integer(item.system.stackLimit, item.type === 'ammunition' ? 30 : 1);
+    if (integer(item.system.qty, 1) > Math.max(1, limit)) return `Split this stack to at most ${Math.max(1, limit)} per grid item.`;
+    const others = actor.items.filter(entry => entry.id !== item.id && storageLocation(entry) === target.id);
+    if (target.maxWeight && others.reduce((sum, entry) => sum + itemWeight(entry), itemWeight(item)) > target.maxWeight + 1e-6) return 'Container weight limit exceeded.';
+    for (const other of others) {
+        const old = dimensions(other);
+        const px = integer(other.system.storage?.x), py = integer(other.system.storage?.y);
+        if (x < px + old.width && x + size.width > px && y < py + old.height && y + size.height > py)
+            return `Overlaps ${other.name}.`;
+    }
+    return null;
+}
+export function firstFreeCell(actor, item, targetId, rotated = false) {
+    const target = ownedContainer(actor, targetId);
+    if (!target) return null;
+    for (let y = 0; y < target.height; y++) for (let x = 0; x < target.width; x++)
+        if (!placementError(actor, item, targetId, x, y, rotated)) return { x, y };
+    return null;
+}
+export async function moveInventoryItem(actor, item, targetId, x, y, rotated = false) {
+    const error = placementError(actor, item, targetId, x, y, rotated);
+    if (error) throw new Error(error);
+    const old = storageLocation(item);
+    // Packing or retrieving from a backpack is deliberate; items in rigs and pockets stay ready.
+    if (inCombat(actor) && (actor.items.get(old)?.type === 'backpack' || actor.items.get(targetId)?.type === 'backpack')) await spendAction(actor, 'help');
+    await item.update({ 'system.storage.containerId': targetId, 'system.storage.x': x,
+        'system.storage.y': y, 'system.storage.rotated': Boolean(rotated),
+        ...(Object.hasOwn(item.system, 'equipped') ? { 'system.equipped': false } : {}) });
+    if (inCombat(actor) && (actor.items.get(old)?.type === 'backpack' || actor.items.get(targetId)?.type === 'backpack'))
+        await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<p>${foundry.utils.escapeHTML(actor.name)} moves ${foundry.utils.escapeHTML(item.name)} between backpack and ready storage (Help action).</p>` });
+}
+export async function unpackItem(actor, item) {
+    if (!actor?.isOwner || item?.parent?.uuid !== actor.uuid) return;
+    const old = storageLocation(item);
+    if (inCombat(actor) && actor.items.get(old)?.type === 'backpack') await spendAction(actor, 'help');
+    await item.update({ 'system.storage.containerId': '', 'system.storage.x': 0, 'system.storage.y': 0, 'system.storage.rotated': false });
+    if (inCombat(actor) && actor.items.get(old)?.type === 'backpack')
+        await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<p>${foundry.utils.escapeHTML(actor.name)} retrieves ${foundry.utils.escapeHTML(item.name)} from a backpack (Help action).</p>` });
+}
+export async function splitInventoryStack(actor, item) {
+    if (!actor?.isOwner || item?.parent?.uuid !== actor.uuid || !['ammunition','consumable','item'].includes(item.type))
+        throw new Error('Only stacked ammunition, consumables, and general items can be split.');
+    if (inCombat(actor)) throw new Error('Split stacks outside combat.');
+    const quantity = integer(item.system.qty);
+    if (quantity < 2) throw new Error('This stack has fewer than two units.');
+    const amount = Math.min(quantity - 1, Math.max(1, integer(item.system.stackLimit, item.type === 'ammunition' ? 30 : 1)));
+    const copy = item.toObject();
+    delete copy._id;
+    copy.system.qty = amount;
+    copy.system.storage = { containerId: '', x: 0, y: 0, rotated: false };
+    await actor.createEmbeddedDocuments('Item', [copy]);
+    await item.update({ 'system.qty': quantity - amount });
+}

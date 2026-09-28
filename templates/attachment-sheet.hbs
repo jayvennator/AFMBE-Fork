@@ -8,6 +8,7 @@
             <tr><th>Recoil reduction (0 to 2)</th><td><input type="number" min="0" max="2" step="1" name="system.recoilReduction" value="{{item.system.recoilReduction}}"></td></tr>
             <tr><th>Normal range added (meters; 0 to 100)</th><td><input type="number" min="0" max="100" step="1" name="system.rangeBonusMeters" value="{{item.system.rangeBonusMeters}}"></td></tr>
             <tr><th>Encumbrance</th><td><input type="number" name="system.encumbrance" value="{{item.system.encumbrance}}"></td></tr>
+            {{> "systems/afmbe-left-behind/templates/components/grid-fields.hbs"}}
             <tr><th>Cost</th><td><input type="number" name="system.cost" value="{{item.system.cost}}"></td></tr>
         </tbody></table><p>Install from a weapon on a character sheet. One attachment fits each slot per weapon. An optic's attack modifier applies on Perception aimed attacks; other attack modifiers apply normally. Installed attachments use their current settings without changing base weapon values. A suppressor has no automatic stealth effect until a noise rule exists.</p></div>
         {{> "systems/afmbe-left-behind/templates/components/item-description-sidebar.hbs"}}

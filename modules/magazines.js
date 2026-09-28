@@ -1,6 +1,7 @@
 import { damageType } from './damage-types.js';
 import { spendAction } from './action-economy.js';
 import { normalizeCaliber } from './calibers.js';
+import { quickAccess } from './inventory-grid.js';
 
 const caliber = normalizeCaliber;
 const count = value => Number(value);
@@ -17,16 +18,19 @@ export function compatibleMagazines(actor, weapon) {
     const key = caliber(weapon.system.ammo_type);
     if (!key) return [];
     return actor.items.filter(item => item.type === 'magazine' && caliber(item.system.caliber) === key &&
+        quickAccess(actor, item) &&
         (!item.system.insertedInWeaponId || item.system.insertedInWeaponId === weapon.id) && item.id !== weapon.system.loadedMagazineId &&
         validCount(item.system.rounds) && validCount(item.system.capacity) && count(item.system.capacity) > 0 &&
         count(item.system.rounds) <= count(item.system.capacity));
 }
 
 export async function reloadWeapon(actor, weapon, magazine) {
+    if (!weapon?.system.equipped || weapon.system.storage?.containerId) return alert('Equip the weapon before reloading it.');
     if (!actor.isOwner || !weapon || !magazine || !compatibleMagazines(actor, weapon).some(item => item.id === magazine.id)) return alert('Choose a compatible spare magazine with valid capacity and rounds.');
     const old = loadedMagazine(actor, weapon);
-    const updates = [{ _id: magazine.id, 'system.insertedInWeaponId': weapon.id }];
-    if (old) updates.push({ _id: old.id, 'system.insertedInWeaponId': '' });
+    const updates = [{ _id: magazine.id, 'system.insertedInWeaponId': weapon.id,
+        'system.storage.containerId': '', 'system.storage.x': 0, 'system.storage.y': 0 }];
+    if (old) updates.push({ _id: old.id, 'system.insertedInWeaponId': '', 'system.storage.containerId': '' });
     await actor.updateEmbeddedDocuments('Item', updates);
     await weapon.update({ 'system.usesMagazines': true, 'system.loadedMagazineId': magazine.id,
         'system.capacity.value': count(magazine.system.rounds), 'system.capacity.max': count(magazine.system.capacity) });

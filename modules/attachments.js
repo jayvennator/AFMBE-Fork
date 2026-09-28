@@ -2,6 +2,7 @@ import { spendAction } from './action-economy.js';
 import { attributeBonus, skillBonus } from './consumables.js';
 import { traitRollEffects, traitSummary } from './trait-effects.js';
 import { weaponCategory } from './weapon-feed.js';
+import { quickAccess, inCombat, storageLocation } from './inventory-grid.js';
 
 export const ATTACHMENT_SLOTS = Object.freeze(['optic', 'muzzle', 'underbarrel', 'stock', 'accessory']);
 const safe = value => foundry.utils.escapeHTML(String(value ?? ''));
@@ -32,9 +33,11 @@ export function attachmentModifiers(actor, weapon, { aimed = false } = {}) {
 export function canInstall(actor, weapon, attachment) {
     return Boolean(actor?.isOwner && weapon?.type === 'weapon' && attachment?.type === 'attachment' &&
         weapon.parent?.uuid === actor.uuid && attachment.parent?.uuid === actor.uuid &&
+        (!inCombat(actor) || (weapon.system.equipped && !storageLocation(weapon))) &&
         ATTACHMENT_SLOTS.includes(attachment.system.slot) &&
         ['any', weaponCategory(weapon)].includes(attachment.system.weaponCategory) &&
         !attachment.system.installedWeaponId &&
+        quickAccess(actor, attachment) &&
         !actor.items.filter(item => item.type === 'attachment' && item.id !== attachment.id &&
             item.system.installedWeaponId === weapon.id && item.system.slot === attachment.system.slot).length);
 }
@@ -73,7 +76,8 @@ export function promptInstallAttachment(actor, weapon) {
             let outcome = 'Failure: attachment remains uninstalled.';
             if (total >= 9) {
                 if (canInstall(actor, weapon, attachment)) {
-                    await attachment.update({ 'system.installedWeaponId': weapon.id });
+                    await attachment.update({ 'system.installedWeaponId': weapon.id,
+                        'system.storage.containerId': '', 'system.storage.x': 0, 'system.storage.y': 0 });
                     outcome = `Success: ${safe(attachment.name)} installed on ${safe(weapon.name)}.`;
                 } else outcome = 'Slot changed during the roll; no attachment installed.';
             }

@@ -205,6 +205,8 @@
             "armor",
             "consumable",
             "attachment",
+            "backpack",
+            "rig",
             "item",
             "aspect",
             "magazine",
@@ -301,7 +303,11 @@
                     "essence": 0,
                     "initiative": 0
                 },
-                "autoRollEffects": []
+                "autoRollEffects": [],
+                "gridSize": { "width": 1, "height": 1 },
+                "storage": { "containerId": "", "x": 0, "y": 0, "rotated": false },
+                "stackLimit": 1,
+                "quickAccess": false
             }
         },
         "quality": {
@@ -331,7 +337,21 @@
             "templates": [
                 "common",
                 "weapon"
-            ]
+            ],
+            "equipped": false,
+            "gridSize": { "width": 2, "height": 3 }
+        },
+        "backpack": {
+            "templates": ["common"],
+            "encumbrance": 3,
+            "equipped": false,
+            "grid": { "width": 6, "height": 8, "maxWeight": 40 }
+        },
+        "rig": {
+            "templates": ["common"],
+            "encumbrance": 4,
+            "equipped": false,
+            "grid": { "width": 4, "height": 4, "maxWeight": 12 }
         },
         "attachment": {
             "templates": ["common"],
@@ -384,6 +404,7 @@
             ],
             "qty": 1,
             "healing": 0,
+            "gridSize": { "width": 1, "height": 1 },
             "armorRestoration": 0,
             "attribute": "",
             "skillId": "",
@@ -399,6 +420,7 @@
             ],
             "caliber": "",
             "capacity": 0,
+            "gridSize": { "width": 1, "height": 2 },
             "rounds": 0,
             "ammoType": "bullets",
             "insertedInWeaponId": ""
@@ -409,6 +431,7 @@
             ],
             "caliber": "",
             "qty": 0,
+            "stackLimit": 30,
             "ammoType": "bullets"
         }
     }

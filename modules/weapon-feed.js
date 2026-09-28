@@ -1,6 +1,7 @@
 import { normalizeCaliber } from './calibers.js';
 import { damageType } from './damage-types.js';
 import { spendAction } from './action-economy.js';
+import { quickAccess } from './inventory-grid.js';
 
 export function weaponCategory(weapon) {
     const category = weapon.system.weaponCategory;
@@ -22,9 +23,11 @@ export function compatibleLooseAmmo(actor, weapon) {
     const key = normalizeCaliber(weapon.system.ammo_type);
     if (!key) return [];
     return actor.items.filter(item => item.type === 'ammunition' && normalizeCaliber(item.system.caliber) === key &&
+        quickAccess(actor, item) &&
         Number.isSafeInteger(Number(item.system.qty)) && Number(item.system.qty) > 0);
 }
 export async function loadInternalRound(actor, weapon, ammo) {
+    if (!weapon?.system.equipped || weapon.system.storage?.containerId) throw new Error('Equip this weapon before loading it.');
     if (!actor.isOwner || !weapon || !ammo || !compatibleLooseAmmo(actor, weapon).some(i => i.id === ammo.id)) throw new Error('Choose compatible loose ammunition with at least one round.');
     const feed = feedSystem(weapon);
     if (!['internal','cylinder','single'].includes(feed)) throw new Error('This weapon does not load loose ammunition directly.');
@@ -45,6 +48,7 @@ export async function loadInternalRound(actor, weapon, ammo) {
 }
 export async function unloadInternalRounds(actor, weapon) {
     if (!actor.isOwner || !weapon || !['internal','cylinder','single'].includes(feedSystem(weapon))) throw new Error('This weapon does not have a direct-load chamber.');
+    if (!weapon.system.equipped || weapon.system.storage?.containerId) throw new Error('Equip the weapon before unloading.');
     const rounds = Number(weapon.system.capacity?.value);
     if (!Number.isSafeInteger(rounds) || rounds <= 0) throw new Error('No rounds to unload.');
     const oldType = damageType(weapon.system.loadedAmmoType || weapon.system.damage_type);
@@ -60,6 +64,7 @@ export async function unloadInternalRounds(actor, weapon) {
 
 export async function removeMagazine(actor, weapon) {
     if (!actor.isOwner || !weapon?.system.loadedMagazineId) throw new Error('No inserted magazine.');
+    if (!weapon.system.equipped || weapon.system.storage?.containerId) throw new Error('Equip the weapon before removing its magazine.');
     const magazine = actor.items.get(weapon.system.loadedMagazineId);
     if (!magazine || magazine.type !== 'magazine' || magazine.system.insertedInWeaponId !== weapon.id) throw new Error('Inserted magazine is missing.');
     await magazine.update({ 'system.insertedInWeaponId': '' });

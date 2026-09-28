@@ -1,0 +1,37 @@
+<div class="item-table">
+    <h2>Backpacks & combat rigs</h2>
+    <p>Wear one backpack and one rig. Drag an item to a grid cell; hold Shift while dropping to rotate it. Retrieving from a backpack takes a Help action in combat.</p>
+    {{#each actor.backpack as |item|}}
+    <div class="item" data-item-id="{{item._id}}"><label><input type="checkbox" class="toggle-container-equipped" {{checked item.system.equipped}}> Wear</label>
+        <span class="item-name">{{item.name}}</span> ({{item.system.grid.width}}×{{item.system.grid.height}}, {{item.system.grid.maxWeight}} lb max)
+        <a class="item-control item-delete" title="Delete"><i class="fas fa-trash"></i></a></div>
+    {{/each}}
+    {{#each actor.rig as |item|}}
+    <div class="item" data-item-id="{{item._id}}"><label><input type="checkbox" class="toggle-container-equipped" {{checked item.system.equipped}}> Wear</label>
+        <span class="item-name">{{item.name}}</span> ({{item.system.grid.width}}×{{item.system.grid.height}}, {{item.system.grid.maxWeight}} lb max)
+        <a class="item-control item-delete" title="Delete"><i class="fas fa-trash"></i></a></div>
+    {{/each}}
+    <button type="button" class="create-item" data-create="backpack">+ Backpack</button>
+    <button type="button" class="create-item" data-create="rig">+ Combat rig</button>
+</div>
+{{#each actor.inventoryGrids as |container|}}
+<div class="item-table"><h3>{{container.label}} ({{container.width}}×{{container.height}}{{#if container.maxWeight}}, max {{container.maxWeight}} lb{{/if}}){{#if container.type}}{{#unless container.equipped}} — not worn{{/unless}}{{/if}}</h3>
+<div class="afmbe-inventory-grid" data-container-id="{{container.id}}" data-width="{{container.width}}" style="--inventory-columns:{{container.width}}">
+    {{#each container.cells as |cell|}}
+    <div class="inventory-grid-cell" data-container-id="{{container.id}}" data-x="{{cell.x}}" data-y="{{cell.y}}"></div>
+    {{/each}}
+    {{#each container.contents as |stored|}}
+    <div class="item inventory-grid-item" data-item-id="{{stored.id}}" title="{{stored.name}} — drag to move" style="grid-column:{{stored.column}} / span {{stored.width}};grid-row:{{stored.row}} / span {{stored.height}}">{{stored.name}} <button type="button" class="inventory-unpack" title="Take out">×</button></div>
+    {{/each}}
+</div></div>
+{{/each}}
+<div class="item-table"><h3>Loose / not packed</h3><p>Items here have no quick-access slot. Weapons must be equipped; put small supplies in pockets or the rig.</p>
+{{#each actor.unassignedInventory as |item|}}
+<div class="item" data-item-id="{{item._id}}"><span class="item-name">{{item.name}}</span>
+    {{#if item.system.qty}}<button type="button" class="inventory-split">Split stack</button>{{/if}}
+    {{#each @root.actor.inventoryGrids as |container|}}
+    {{#if container.equipped}}<button type="button" class="inventory-autopack" data-container-id="{{container.id}}">Put in {{container.label}}</button>{{else}}{{#unless container.type}}<button type="button" class="inventory-autopack" data-container-id="{{container.id}}">Put in pockets</button>{{/unless}}{{/if}}
+    {{/each}}
+</div>
+{{/each}}
+</div>

@@ -2,12 +2,16 @@ import { armorIntegrity } from './armor-integrity.js';
 import { spendAction } from './action-economy.js';
 import { attributeBonus, skillBonus } from './consumables.js';
 import { traitRollEffects, traitSummary } from './trait-effects.js';
+import { quickAccess, inCombat } from './inventory-grid.js';
 
 export function promptArmorReplenishment(actor, armor) {
     if (!actor?.isOwner || !armor || !['armor', 'item'].includes(armor.type)) return;
+    if (inCombat(actor) && (!armor.system.equipped || armor.system.storage?.containerId))
+        return ui.notifications.warn('Repair armor while it is worn or outside combat.');
     const before = armorIntegrity(armor);
     if (before.value >= before.max) return ui.notifications.info(`${armor.name} is already intact.`);
-    const supplies = actor.items.filter(item => item.type === 'consumable' && Number(item.system.armorRestoration) >= 1 && Number.isInteger(Number(item.system.qty)) && Number(item.system.qty) > 0);
+    const supplies = actor.items.filter(item => item.type === 'consumable' && quickAccess(actor, item) &&
+        Number(item.system.armorRestoration) >= 1 && Number.isInteger(Number(item.system.qty)) && Number(item.system.qty) > 0);
     if (!supplies.length) return ui.notifications.warn('Add a consumable with Armor integrity restored greater than zero to replenish armor.');
     const esc = foundry.utils.escapeHTML;
     const attributes = actor.system.primaryAttributes ?? {};

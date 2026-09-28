@@ -671,6 +671,38 @@
     cursor: pointer;
 }
 
+.afmbe-left-behind .afmbe-inventory-tabs {
+    display: flex;
+    gap: 0.3rem;
+    margin: 0.5rem 0;
+}
+.afmbe-left-behind .afmbe-inventory-tabs button.active {
+    font-weight: bold;
+    outline: 2px solid currentColor;
+}
+.afmbe-left-behind .afmbe-inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--inventory-columns), minmax(36px, 1fr));
+    grid-auto-rows: 38px;
+    max-width: 510px;
+    margin: 0.4rem 0 1rem;
+}
+.afmbe-left-behind .inventory-grid-cell {
+    border: 1px solid #888;
+    background: rgba(100,100,100,0.08);
+}
+.afmbe-left-behind .inventory-grid-cell:hover { background: rgba(100,150,220,0.3); }
+.afmbe-left-behind .inventory-grid-item {
+    z-index: 1;
+    border: 1px solid #888;
+    background: var(--color-bg-option, #353d47);
+    color: var(--color-text-primary, #eee);
+    overflow: hidden;
+    padding: 2px;
+    font-size: 0.8rem;
+    cursor: grab;
+}
+
 /* ------------------------------------------- 
         Item Sheets
  ---------------------------------------------*/

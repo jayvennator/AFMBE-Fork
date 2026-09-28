@@ -101,6 +101,8 @@
     "AFMBE.Armor.Title": "Armor",
     "AFMBE.ItemType.armor": "Armor",
     "AFMBE.ItemType.attachment": "Attachment",
+    "AFMBE.ItemType.backpack": "Backpack",
+    "AFMBE.ItemType.rig": "Combat rig",
     "AFMBE.ItemType.aspect": "Aspect",
     "AFMBE.ItemType.drawback": "Drawback",
     "AFMBE.ItemType.item": "Item",

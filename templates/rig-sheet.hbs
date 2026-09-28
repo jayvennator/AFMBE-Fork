@@ -1,0 +1,10 @@
+<form class="{{cssClass}}" autocomplete="off">
+{{> "systems/afmbe-left-behind/templates/components/item-sheet-header.hbs"}}
+<section class="description-container"><div class="item-attribute-sidebar"><h2>Combat rig</h2><table><tbody>
+<tr><th>Worn</th><td>{{#if item.system.equipped}}Yes{{else}}No{{/if}} (toggle on character sheet)</td></tr>
+<tr><th>Grid width</th><td><input type="number" min="1" max="12" step="1" name="system.grid.width" value="{{item.system.grid.width}}"></td></tr>
+<tr><th>Grid height</th><td><input type="number" min="1" max="12" step="1" name="system.grid.height" value="{{item.system.grid.height}}"></td></tr>
+<tr><th>Contents weight limit (lb)</th><td><input type="number" min="0" step="any" name="system.grid.maxWeight" value="{{item.system.grid.maxWeight}}"></td></tr>
+<tr><th>Empty weight (lb)</th><td><input type="number" min="0" step="any" name="system.encumbrance" value="{{item.system.encumbrance}}"></td></tr>
+</tbody></table><p>Small supplies, magazines and quick-access items only. Wear one rig at a time.</p></div>
+{{> "systems/afmbe-left-behind/templates/components/item-description-sidebar.hbs"}}</section></form>

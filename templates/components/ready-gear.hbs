@@ -1,0 +1,21 @@
+<div class="weapon-table"><h2>Equipped weapons</h2>
+<table><thead><tr><th>Name / actions</th><th>Damage</th><th>Ammo</th><th>Weight</th><th></th></tr></thead><tbody>
+{{#each actor.readyWeapons as |item|}}
+{{> "systems/afmbe-left-behind/templates/components/weapon-row.hbs" item=item}}
+{{/each}}
+</tbody></table>
+{{#unless actor.readyWeapons.length}}<p>Equip up to two weapons from All items.</p>{{/unless}}
+</div>
+<div class="item-table"><h2>Worn armor</h2>
+{{#each actor.readyArmor as |item|}}
+<div class="item" data-item-id="{{item._id}}"><span class="item-name">{{item.name}}</span>
+    <span>Integrity {{item.system.armor_integrity.value}} / {{item.system.armor_integrity.max}}</span>
+    <button type="button" class="replenish-armor">Repair</button>
+</div>
+{{/each}}</div>
+<div class="item-table"><h2>Quick supplies (rig and pockets)</h2>
+{{#each actor.readyConsumables as |item|}}
+<div class="item" data-item-id="{{item._id}}"><span class="item-name">{{item.name}}</span> × {{item.system.qty}}
+    <button type="button" class="use-consumable">Use</button>
+</div>
+{{/each}}</div>
