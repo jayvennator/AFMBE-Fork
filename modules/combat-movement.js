@@ -61,7 +61,7 @@ export async function attemptDash(actor) {
         await actor.setFlag(SYSTEM, 'dash', { key: ctx.key, attempts: (Number(dash.attempts) || 0) + 1,
             successes: dashSuccesses(dash) + (success ? 1 : 0), failed: !success });
         await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), rolls: [roll],
-            content: `<p>${foundry.utils.escapeHTML(actor.name)} attempts to dash: ${roll.total} + Constitution ${constitution * 2} + effects ${effects} ${penalty < 0 ? `− ${-penalty}` : '+ 0'} = <strong>${total}</strong> vs 9. ${success ? 'Success: another movement allowance unlocked; Essence is spent as you travel. You may try again at an additional −2.' : 'Failure: no extra allowance; no further Dash attempts this turn.'}</p>` });
+            content: `<p>${foundry.utils.escapeHTML(actor.name)} attempts to dash: ${roll.total} + Constitution ${constitution * 2} + effects ${effects} ${penalty < 0 ? `− ${-penalty}` : '+ 0'} = <strong>${total}</strong> vs 9. ${success ? 'Success: another movement allowance unlocked; Endurance is spent as you travel. You may try again at an additional −2.' : 'Failure: no extra allowance; no further Dash attempts this turn.'}</p>` });
     } finally { rollingDash.delete(actor.uuid); }
 }
 
@@ -85,9 +85,9 @@ export function registerCombatMovement() {
         if ((actionState(ctx.actor)?.counts.movement ?? 0) > 0 && traveled === 0 && !dashActive) {
             ui.notifications.warn('Movement action already spent. Dash to move farther.'); return false;
         }
-        const essence = meters(ctx.actor.system.secondaryAttributes?.essence?.value);
+        const endurance = meters(ctx.actor.system.secondaryAttributes?.endurance_points?.value);
         const cost = Math.max(0, Math.ceil(Math.max(0, traveled + distance - allowance) - 0.001) - Math.ceil(Math.max(0, traveled - allowance) - 0.001));
-        if (cost > essence) { ui.notifications.warn(`Dash requires ${cost} Essence; only ${essence} remain.`); return false; }
+        if (cost > endurance) { ui.notifications.warn(`Dash requires ${cost} Endurance; only ${endurance} remain.`); return false; }
         pending.set(token.uuid, { key: ctx.key, traveled, distance, cost, actor: ctx.actor });
     }
     // Foundry's movement hook supplies the routed waypoints. A direct token position
@@ -106,7 +106,7 @@ export function registerCombatMovement() {
         try {
             if (move.traveled === 0 && !(actionState(move.actor)?.counts.movement ?? 0)) await spendAction(move.actor, 'movement');
             await token.setFlag(SYSTEM, 'combatMovement', { key: move.key, distance: round(move.traveled + move.distance) });
-            if (move.cost) await move.actor.update({ 'system.secondaryAttributes.essence.value': meters(move.actor.system.secondaryAttributes.essence.value) - move.cost });
+            if (move.cost) await move.actor.update({ 'system.secondaryAttributes.endurance_points.value': meters(move.actor.system.secondaryAttributes.endurance_points.value) - move.cost });
             if (move.actor.sheet?.rendered) move.actor.sheet.render(false);
         } catch (error) { console.error('AFMBE movement tracking failed', error); ui.notifications.error(error.message); }
     });
