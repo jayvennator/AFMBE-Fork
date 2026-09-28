@@ -16,7 +16,7 @@ import { attachmentModifiers, promptInstallAttachment, removeAttachment } from '
 import { SKILL_CATEGORIES, skillCategory } from './skill-categories.js';
 import { containers, dimensions, firstFreeCell, nearestFreeCell, moveInventoryItem, unpackItem, splitInventoryStack, stashItem, storageLocation, inCombat, handCount, HAND_LIMIT, STASH, inventoryActionCost, itemWeight } from './inventory-grid.js';
 import { loadedMagazine, compatibleMagazines, reloadWeapon, loadMagazine, unloadMagazine } from './magazines.js';
-import { coverForAttack } from './region-cover.js';
+import { coverForAttack, toggleCoverStance } from './region-cover.js';
 
 export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
 
@@ -406,6 +406,10 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             await endConsumableEffect(this.actor, event.currentTarget.dataset.effectId);
         })
         html.find('.roll-combat-task').click(this._onCombatTaskRoll.bind(this));
+        html.find('.take-cover').click(async () => {
+            try { await toggleCoverStance(this.actor); }
+            catch (error) { ui.notifications.warn(error.message); }
+        });
         html.find('.spend-action').click(async event => {
             const type = event.currentTarget.dataset.actionType;
             try {

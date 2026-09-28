@@ -1,4 +1,5 @@
 import { SKILL_CATEGORIES, skillCategory } from './skill-categories.js';
+import { toggleCoverStance } from './region-cover.js';
 
 export class afmbeCreatureSheet extends foundry.appv1.sheets.ActorSheet {
 
@@ -111,6 +112,10 @@ export class afmbeCreatureSheet extends foundry.appv1.sheets.ActorSheet {
 
         // Buttons and Event Listeners
         html.find('.attribute-roll').click(this._onAttributeRoll.bind(this))
+        html.find('.take-cover').click(async () => {
+            try { await toggleCoverStance(this.actor); }
+            catch (error) { ui.notifications.warn(error.message); }
+        })
         if (this.actor.isOwner) html.find('.damage-roll').click(this._onDamageRoll.bind(this))
         html.find('.toggleEquipped').click(this._onToggleEquipped.bind(this))
         html.find('.armor-button-cell button').click(this._onArmorRoll.bind(this))

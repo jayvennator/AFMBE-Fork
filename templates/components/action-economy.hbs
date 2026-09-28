@@ -6,6 +6,7 @@
     {{#each actor.actionEconomy.rows as |row|}}
         <div class="afmbe-action-row"><strong>{{row.label}}</strong> <span>Used: {{row.used}} · Next: {{row.penalty}}</span>
             {{#if row.defensive}}<button type="button" class="roll-combat-task" data-action-type="defensive">Defend</button>{{/if}}
+            {{#if row.movement}}<button type="button" class="take-cover" title="Take cover beside a marked Region (Movement action); click again to leave cover">Take / leave cover</button>{{/if}}
             {{#if row.help}}<button type="button" class="roll-combat-task" data-action-type="help">Roll help</button>{{/if}}
             <button type="button" class="spend-action" data-action-type="{{row.type}}" title="Mark an action handled outside this sheet">Mark</button>
             {{#if ../isGM}}<button type="button" class="correct-action" data-action-type="{{row.type}}" title="Undo one action">−</button>{{/if}}
