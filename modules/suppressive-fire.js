@@ -12,10 +12,12 @@ const SYSTEM = 'afmbe-left-behind';
 const esc = value => foundry.utils.escapeHTML(String(value ?? ''));
 const busy = new Set();
 const degrees = angle => ((angle % 360) + 360) % 360;
+export const MAX_SUPPRESSION_SPACES = 10;
+export const suppressionMaxDistance = scene => Number(scene.grid.distance) * MAX_SUPPRESSION_SPACES;
 
 export function coneContains(template, token, scene) {
     const scale = Number(scene.grid.distance) / Number(canvas.grid.size);
-    const radius = Number(template.distance) / scale;
+    const radius = Math.min(Number(template.distance), suppressionMaxDistance(scene)) / scale;
     if (!(radius > 0)) return false;
     const dx = token.center.x - template.x, dy = token.center.y - template.y;
     if (Math.hypot(dx, dy) > radius) return false;
@@ -38,24 +40,32 @@ export function beginSuppressiveCone(actor, weapon, skill, attribute) {
     if (busy.has(key)) throw new Error('Finish placing the previous suppression cone.');
     busy.add(key);
     const sceneId = canvas.scene.id;
+    const maxDistance = suppressionMaxDistance(canvas.scene);
+    const capPreview = (template, data, options, userId) => {
+        if (userId === game.user.id && template.parent?.id === sceneId && template.t === 'cone' && Number(template.distance) > maxDistance)
+            template.updateSource({ distance: maxDistance });
+    };
     const listener = async (template, options, userId) => {
         if (userId !== game.user.id || template.parent?.id !== sceneId || template.t !== 'cone') return;
         Hooks.off('createMeasuredTemplate', listener);
+        Hooks.off('preCreateMeasuredTemplate', capPreview);
         clearTimeout(timeout);
         busy.delete(key);
         if (Math.hypot(template.x - shooter.center.x, template.y - shooter.center.y) > Number(canvas.grid.size) * 0.75) {
             ui.notifications.warn('Draw the cone starting at the shooter token. No ammunition was spent.');
             return;
         }
+        if (Number(template.distance) > maxDistance) await template.update({ distance: maxDistance });
         await ChatMessage.create({ user: game.user.id, speaker: ChatMessage.getSpeaker({ actor }),
             content: `<h2>Suppressive fire requested</h2><p>${esc(actor.name)} aims ${esc(weapon.name)}. ZM: review the cone and threatened tokens before firing. No ammunition spent yet.</p>`,
             flags: { [SYSTEM]: { suppression: { status: 'pending', actorUuid: actor.uuid, weaponUuid: weapon.uuid,
                 templateUuid: template.uuid, sceneId, authorId: game.user.id, skillId: skill?.id ?? '', attribute } } } });
     };
-    const timeout = setTimeout(() => { Hooks.off('createMeasuredTemplate', listener); busy.delete(key); }, 120000);
+    const timeout = setTimeout(() => { Hooks.off('createMeasuredTemplate', listener); Hooks.off('preCreateMeasuredTemplate', capPreview); busy.delete(key); }, 120000);
+    Hooks.on('preCreateMeasuredTemplate', capPreview);
     Hooks.on('createMeasuredTemplate', listener);
     canvas.templates.activate({ tool: 'cone' });
-    ui.notifications.info('Draw a cone starting at your token. Right-click to cancel; cancelling spends nothing.');
+    ui.notifications.info('Draw a cone starting at your token (maximum 10 grid spaces). Right-click to cancel; cancelling spends nothing.');
 }
 
 async function review(message) {
@@ -64,11 +74,12 @@ async function review(message) {
     const scene = game.scenes.get(data.sceneId);
     const template = await fromUuid(data.templateUuid);
     if (!scene || !template || canvas.scene?.id !== scene.id) return ui.notifications.warn('Open the scene with the suppression cone first.');
+    if (Number(template.distance) > suppressionMaxDistance(scene)) await template.update({ distance: suppressionMaxDistance(scene) });
     const tokens = canvas.tokens.placeables.filter(token => token.actor);
     const shooter = await fromUuid(data.actorUuid);
     const list = tokens.filter(token => token.actor.uuid !== shooter?.uuid).map(token =>
         `<label><input type="checkbox" name="targets" value="${esc(token.document.id)}" ${coneContains(template, token, scene) ? 'checked' : ''}>${esc(token.name)}</label>`).join('<br>');
-    new Dialog({ title: 'ZM: review suppressive fire', content: `<form><p>Choose affected tokens. Confirm commits 10 rounds and the attack action.</p>${list || '<p>No other tokens on the scene.</p>'}</form>`, buttons: {
+    new Dialog({ title: 'ZM: review suppressive fire', content: `<form><p>Maximum range: ${MAX_SUPPRESSION_SPACES} grid spaces. Choose affected tokens. Confirm commits 10 rounds and the attack action.</p>${list || '<p>No other tokens on the scene.</p>'}</form>`, buttons: {
         cancel: { label: 'Keep pending' },
         deny: { label: 'Cancel shot', callback: () => message.update({ [`flags.${SYSTEM}.suppression.status`]: 'cancelled' }) },
         fire: { label: 'Confirm fire', callback: async html => {
@@ -90,6 +101,7 @@ async function commitSuppression(message, targetIds) {
         if (!actor || !weapon || weapon.parent?.uuid !== actor.uuid || !author || (!author.isGM && !actor.testUserPermission(author, 'OWNER')) ||
             !scene || !template || canvas.scene?.id !== scene.id || !weapon.system.equipped || !allowedFireModes(weapon).includes('automatic'))
             throw new Error('The shooter, weapon, cone, or scene is no longer valid.');
+        if (Number(template.distance) > suppressionMaxDistance(scene)) throw new Error('The cone exceeds 10 grid spaces. Review it again before firing.');
         const feed = feedSystem(weapon);
         const magazine = ['detachable', 'legacy'].includes(feed) && (feed === 'detachable' || weapon.system.usesMagazines) ? loadedMagazine(actor, weapon) : null;
         const rounds = magazine ? Number(magazine.system.rounds) : Number(weapon.system.capacity?.value);
