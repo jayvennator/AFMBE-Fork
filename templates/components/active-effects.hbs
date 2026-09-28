@@ -1,0 +1,8 @@
+<div class="item-table afmbe-active-effects"><h2>Active effects</h2>
+    {{#each actor.activeConsumables as |effect|}}
+    <div class="afmbe-active-effect"><strong>{{effect.name}}</strong>
+        <span>{{#if effect.phase}}{{effect.phase}}{{else}}boost{{/if}} · {{effect.bonus}} to {{#if effect.attribute}}{{effect.attribute}}{{else}}{{#if effect.skillName}}{{effect.skillName}}{{else}}skill{{/if}}{{/if}} · {{effect.rounds}} rounds</span>
+        <button type="button" class="end-consumable" data-effect-id="{{effect.id}}">{{#if effect.willCrash}}End / trigger crash{{else}}End{{/if}}</button>
+    </div>
+    {{else}}<p>No active effects.</p>{{/each}}
+</div>

@@ -17,6 +17,19 @@
             <button type="button" class="replenish-armor">Repair</button><button type="button" class="inventory-equip">Unequip</button></div></div>{{/each}}
             <span>Drag armor here to wear it.</span>
         </div>
+        <div class="afmbe-equip-slot" data-equip-slot="backpack"><strong>Backpack</strong>
+            {{#if actor.readyBackpack}}<div class="item afmbe-equipped-item" data-item-id="{{actor.readyBackpack._id}}"><img class="afmbe-item-portrait" src="{{actor.readyBackpack.img}}" alt="" draggable="false"><div class="afmbe-equipped-details"><span class="item-name">{{actor.readyBackpack.name}}</span><small>{{actor.readyBackpack.system.grid.width}}×{{actor.readyBackpack.system.grid.height}} · {{actor.readyBackpack.system.grid.maxWeight}} lb max</small><button type="button" class="inventory-equip">Take off</button></div></div>
+            {{else}}<span>Drag a backpack here or choose one below.</span>
+                {{#each actor.backpack as |item|}}<div class="item afmbe-container-option" data-item-id="{{item._id}}"><img class="afmbe-item-portrait" src="{{item.img}}" alt="" draggable="false"><span class="item-name">{{item.name}}</span><button type="button" class="toggle-container-equipped">Wear</button></div>{{/each}}
+            {{/if}}
+        </div>
+        <div class="afmbe-equip-slot" data-equip-slot="rig"><strong>Combat rig</strong>
+            {{#if actor.readyRig}}<div class="item afmbe-equipped-item" data-item-id="{{actor.readyRig._id}}"><img class="afmbe-item-portrait" src="{{actor.readyRig.img}}" alt="" draggable="false"><div class="afmbe-equipped-details"><span class="item-name">{{actor.readyRig.name}}</span><small>{{actor.readyRig.system.grid.width}}×{{actor.readyRig.system.grid.height}} · {{actor.readyRig.system.grid.maxWeight}} lb max</small><button type="button" class="inventory-equip">Take off</button></div></div>
+            {{else}}<span>Drag a combat rig here or choose one below.</span>
+                {{#each actor.rig as |item|}}<div class="item afmbe-container-option" data-item-id="{{item._id}}"><img class="afmbe-item-portrait" src="{{item.img}}" alt="" draggable="false"><span class="item-name">{{item.name}}</span><button type="button" class="toggle-container-equipped">Wear</button></div>{{/each}}
+            {{/if}}
+        </div>
+        {{> "systems/afmbe-left-behind/templates/components/active-effects.hbs"}}
     </section>
     <section class="afmbe-loadout-storage">
         {{> "systems/afmbe-left-behind/templates/components/inventory-grids.hbs"}}

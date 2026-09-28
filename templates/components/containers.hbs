@@ -1,0 +1,10 @@
+<div class="item-table"><h2>Backpacks and combat rigs</h2>
+    <button type="button" class="create-item" data-create="backpack">+ Backpack</button>
+    <button type="button" class="create-item" data-create="rig">+ Combat rig</button>
+    {{#each actor.backpack as |item|}}
+    <div class="item afmbe-container-row" data-item-id="{{item._id}}"><img class="afmbe-item-portrait" src="{{item.img}}" alt="" draggable="false"><button type="button" class="toggle-container-equipped">{{#if item.system.equipped}}Take off{{else}}Wear{{/if}}</button><span class="item-name">{{item.name}}</span> <small>({{item.system.grid.width}}×{{item.system.grid.height}}, {{item.system.grid.maxWeight}} lb max)</small><a class="item-control item-delete" title="Delete"><i class="fas fa-trash"></i></a></div>
+    {{/each}}
+    {{#each actor.rig as |item|}}
+    <div class="item afmbe-container-row" data-item-id="{{item._id}}"><img class="afmbe-item-portrait" src="{{item.img}}" alt="" draggable="false"><button type="button" class="toggle-container-equipped">{{#if item.system.equipped}}Take off{{else}}Wear{{/if}}</button><span class="item-name">{{item.name}}</span> <small>({{item.system.grid.width}}×{{item.system.grid.height}}, {{item.system.grid.maxWeight}} lb max)</small><a class="item-control item-delete" title="Delete"><i class="fas fa-trash"></i></a></div>
+    {{/each}}
+</div>

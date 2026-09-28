@@ -161,6 +161,8 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             .filter(entry => entry.system.equipped && !storageLocation(entry))
         actorData.backpack = backpack
         actorData.rig = rig
+        actorData.readyBackpack = backpack.find(entry => entry.system.equipped) ?? null
+        actorData.readyRig = rig.find(entry => entry.system.equipped) ?? null
         const allStored = sheetData.items.filter(entry => !['skill','quality','drawback','power','aspect','backpack','rig'].includes(entry.type) &&
             !(entry.type === 'magazine' && entry.system.insertedInWeaponId && !storageLocation(entry)) &&
             !(entry.type === 'attachment' && entry.system.installedWeaponId && !storageLocation(entry)))
@@ -326,7 +328,9 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             const item = this.actor.items.get(event.originalEvent.dataTransfer.getData('application/x-afmbe-item'))
             if (!item) return
             if (event.currentTarget.dataset.equipSlot === 'weapon' && item.type !== 'weapon' ||
-                event.currentTarget.dataset.equipSlot === 'armor' && !['armor', 'item'].includes(item.type))
+                event.currentTarget.dataset.equipSlot === 'armor' && !['armor', 'item'].includes(item.type) ||
+                event.currentTarget.dataset.equipSlot === 'backpack' && item.type !== 'backpack' ||
+                event.currentTarget.dataset.equipSlot === 'rig' && item.type !== 'rig')
                 return ui.notifications.warn('This item does not fit that equipment slot.')
             try { await this._setInventoryEquipped(item, true) }
             catch (error) { ui.notifications.warn(error.message) }

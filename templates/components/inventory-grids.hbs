@@ -19,18 +19,6 @@
         <small>Size {{actor.selectedInventoryItem.footprint.width}}×{{actor.selectedInventoryItem.footprint.height}}</small></div>
     {{else}}<span>Click an item to see Equip, Use, and Move actions here.</span>{{/if}}
     </div>
-    {{#each actor.backpack as |item|}}
-    <div class="item afmbe-container-row" data-item-id="{{item._id}}"><img class="afmbe-item-portrait" src="{{item.img}}" alt="" draggable="false"><label><input type="checkbox" class="toggle-container-equipped" {{checked item.system.equipped}}> Wear</label>
-        <span class="item-name">{{item.name}}</span> ({{item.system.grid.width}}×{{item.system.grid.height}}, {{item.system.grid.maxWeight}} lb max)
-        <a class="item-control item-delete" title="Delete"><i class="fas fa-trash"></i></a></div>
-    {{/each}}
-    {{#each actor.rig as |item|}}
-    <div class="item afmbe-container-row" data-item-id="{{item._id}}"><img class="afmbe-item-portrait" src="{{item.img}}" alt="" draggable="false"><label><input type="checkbox" class="toggle-container-equipped" {{checked item.system.equipped}}> Wear</label>
-        <span class="item-name">{{item.name}}</span> ({{item.system.grid.width}}×{{item.system.grid.height}}, {{item.system.grid.maxWeight}} lb max)
-        <a class="item-control item-delete" title="Delete"><i class="fas fa-trash"></i></a></div>
-    {{/each}}
-    <button type="button" class="create-item" data-create="backpack">+ Backpack</button>
-    <button type="button" class="create-item" data-create="rig">+ Combat rig</button>
 </div>
 {{#each actor.inventoryGrids as |container|}}
 <div class="item-table"><h3>{{container.label}} ({{container.width}}×{{container.height}}{{#if container.maxWeight}}, max {{container.maxWeight}} lb{{/if}}){{#if container.type}}{{#unless container.equipped}} — not worn{{/unless}}{{/if}}</h3><small>{{container.usedCells}} / {{container.cells.length}} cells · {{container.usedWeight}}{{#if container.maxWeight}} / {{container.maxWeight}}{{/if}} lb</small>

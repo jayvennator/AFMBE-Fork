@@ -10,6 +10,8 @@ export function registerTemplates() {
         "systems/afmbe-left-behind/templates/components/equipment-header.hbs",
         "systems/afmbe-left-behind/templates/components/items.hbs",
         "systems/afmbe-left-behind/templates/components/consumables.hbs",
+        "systems/afmbe-left-behind/templates/components/active-effects.hbs",
+        "systems/afmbe-left-behind/templates/components/containers.hbs",
         "systems/afmbe-left-behind/templates/components/action-economy.hbs",
         "systems/afmbe-left-behind/templates/components/item-description-sidebar.hbs",
         "systems/afmbe-left-behind/templates/components/polaroid.hbs",
