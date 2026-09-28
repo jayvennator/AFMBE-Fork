@@ -11,7 +11,8 @@ function context(token) {
     const combat = game.combat;
     const actor = token?.actor;
     if (!actor || actor.type !== 'character' || !combat || Number(combat.round) < 1) return null;
-    if (combat.scene?.id !== token.parent?.id) return null;
+    const sceneId = combat.scene?.id ?? combat.sceneId ?? combat.scene;
+    if (sceneId && sceneId !== token.parent?.id) return null;
     const combatant = combat.combatants.find(entry => entry.tokenId === token.id);
     if (!combatant) return null;
     return { actor, combat, active: combat.combatant?.id === combatant.id,
@@ -24,7 +25,7 @@ export function movementPanel(actor) {
     const ctx = context(token);
     if (!ctx) return null;
     const speed = meters(actor.system.secondaryAttributes?.speed?.halfValue);
-    const allowance = Math.floor(speed * 5);
+    const allowance = Math.floor(speed);
     const stored = token.getFlag(SYSTEM, 'combatMovement') ?? {};
     const traveled = stored.key === ctx.key ? meters(stored.distance) : 0;
     const dash = actor.getFlag(SYSTEM, 'dash') ?? {};
@@ -52,18 +53,17 @@ export async function attemptDash(actor) {
 }
 
 export function registerCombatMovement() {
-    Hooks.on('preMoveToken', (token, movement) => {
+    function checkMove(token, waypoints) {
         const ctx = context(token);
         if (!ctx || game.user.isGM && globalThis.KeyboardManager?.MODIFIER_KEYS?.ALT && game.keyboard?.isModifierActive?.(KeyboardManager.MODIFIER_KEYS.ALT)) return;
         if (!ctx.active) { ui.notifications.warn('Move this token on its combat turn.'); return false; }
-        const waypoints = movement?.waypoints;
         if (!Array.isArray(waypoints) || !waypoints.length) return;
         const measured = token.measureMovementPath([{ x: token.x, y: token.y }, ...waypoints]);
         const distance = meters(measured.distance);
         if (!distance) return;
         const stored = token.getFlag(SYSTEM, 'combatMovement') ?? {};
         const traveled = stored.key === ctx.key ? meters(stored.distance) : 0;
-        const allowance = Math.floor(meters(ctx.actor.system.secondaryAttributes?.speed?.halfValue) * 5);
+        const allowance = Math.floor(meters(ctx.actor.system.secondaryAttributes?.speed?.halfValue));
         const dash = ctx.actor.getFlag(SYSTEM, 'dash') ?? {};
         const dashActive = dash.key === ctx.key && dash.success;
         const max = allowance * (dashActive ? 2 : 1);
@@ -75,6 +75,14 @@ export function registerCombatMovement() {
         const cost = Math.max(0, Math.ceil(Math.max(0, traveled + distance - allowance) - 0.001) - Math.ceil(Math.max(0, traveled - allowance) - 0.001));
         if (cost > essence) { ui.notifications.warn(`Dash requires ${cost} Essence; only ${essence} remain.`); return false; }
         pending.set(token.uuid, { key: ctx.key, traveled, distance, cost, actor: ctx.actor });
+    }
+    // Foundry's movement hook supplies the routed waypoints. A direct token position
+    // update can skip it, so validate those updates as well using the destination.
+    Hooks.on('preMoveToken', (token, movement) => checkMove(token, movement?.waypoints));
+    Hooks.on('preUpdateToken', (token, changes) => {
+        if (!Object.hasOwn(changes, 'x') && !Object.hasOwn(changes, 'y')) return;
+        if (pending.has(token.uuid)) return;
+        return checkMove(token, [{ x: changes.x ?? token.x, y: changes.y ?? token.y }]);
     });
     Hooks.on('updateToken', async (token, changes, _options, userId) => {
         if (userId !== game.user.id || !Object.hasOwn(changes, 'x') && !Object.hasOwn(changes, 'y')) return;
