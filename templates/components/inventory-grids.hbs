@@ -3,9 +3,10 @@
     <p>Click an item for actions. Drag it between grids; hold Shift while dragging to rotate. In combat, moving gear into or out of a backpack costs one Help action. Equipping a weapon from a backpack takes one Help action total. Off-character stash is only available outside combat.</p>
     <div class="afmbe-selected-item">
     {{#if actor.selectedInventoryItem}}
-        <div class="item" data-item-id="{{actor.selectedInventoryItem._id}}"><div class="afmbe-selected-heading"><img class="afmbe-item-portrait" src="{{actor.selectedInventoryItem.img}}" alt="" draggable="false"><strong>{{actor.selectedInventoryItem.name}}</strong></div>
+        <div class="item {{#if (eq actor.selectedInventoryItem.type 'magazine')}}afmbe-magazine-target{{/if}}" data-item-id="{{actor.selectedInventoryItem._id}}"><div class="afmbe-selected-heading"><img class="afmbe-item-portrait" src="{{actor.selectedInventoryItem.img}}" alt="" draggable="false"><strong>{{actor.selectedInventoryItem.name}}</strong></div>
         {{#if actor.selectedInventoryItem.canEquip}}{{#unless actor.selectedInventoryItem.inStash}}<button type="button" class="inventory-equip" title="{{#if actor.selectedInventoryItem.equipCost}}Costs one Help action in combat{{/if}}">{{#if actor.selectedInventoryItem.system.equipped}}Unequip{{else}}Equip{{/if}}{{#if actor.selectedInventoryItem.equipCost}} (1 Help){{/if}}</button>{{/unless}}{{/if}}
         {{#if actor.selectedInventoryItem.canUse}}<button type="button" class="use-consumable">Use</button>{{/if}}
+        {{#if (eq actor.selectedInventoryItem.type 'magazine')}}<button type="button" class="load-magazine">Load ammunition</button>{{/if}}
         {{#if actor.selectedInventoryItem.canRotate}}<button type="button" class="inventory-rotate" title="Turn this item 90 degrees">Rotate ↻</button>{{/if}}
         {{#if actor.selectedInventoryItem.canDetach}}<button type="button" class="inventory-detach">Detach from weapon</button>{{/if}}
         {{#if actor.selectedInventoryItem.stored}}{{#unless actor.selectedInventoryItem.stashLocked}}<button type="button" class="inventory-unpack">{{#if actor.selectedInventoryItem.inStash}}Take from stash{{else}}Take out{{#if actor.selectedInventoryItem.retrievalCost}} (1 Help){{/if}}{{/if}}</button>{{/unless}}{{/if}}
@@ -27,7 +28,7 @@
     <div class="inventory-grid-cell" data-container-id="{{container.id}}" data-x="{{cell.x}}" data-y="{{cell.y}}" style="grid-column:{{cell.column}};grid-row:{{cell.row}}"></div>
     {{/each}}
     {{#each container.contents as |stored|}}
-    <div class="item inventory-grid-item" data-item-id="{{stored.id}}" title="{{stored.name}} ({{stored.width}}×{{stored.height}}) — click for actions or drag to move" style="grid-column:{{stored.column}} / span {{stored.width}};grid-row:{{stored.row}} / span {{stored.height}}"><img class="afmbe-item-portrait" src="{{stored.img}}" alt="" draggable="false"><span class="item-label">{{stored.name}}</span>
+    <div class="item inventory-grid-item {{#if (eq stored.type 'magazine')}}afmbe-magazine-target{{/if}}" data-item-id="{{stored.id}}" title="{{stored.name}} ({{stored.width}}×{{stored.height}}) — click for actions or drag to move" style="grid-column:{{stored.column}} / span {{stored.width}};grid-row:{{stored.row}} / span {{stored.height}}"><img class="afmbe-item-portrait" src="{{stored.img}}" alt="" draggable="false"><span class="item-label">{{stored.name}}</span>
     {{#if stored.qty}}<small>×{{stored.qty}}</small>{{/if}}</div>
     {{/each}}
     <div class="inventory-grid-preview" hidden></div>
@@ -35,11 +36,11 @@
 {{/each}}
 <div class="item-table"><h3>In hands ({{actor.handCount}} / {{actor.handLimit}})</h3><p>Hold up to two loose items while arranging gear. Items in your hands are carried, but have no quick-access slot in combat.{{#if actor.handOverflow}} <strong>Existing gear exceeds the hand limit; pack or stash the excess.</strong>{{/if}}</p>
 {{#each actor.unassignedInventory as |item|}}
-<div class="item afmbe-loose-item" data-item-id="{{item._id}}"><img class="afmbe-item-portrait" src="{{item.img}}" alt="" draggable="false"><span>{{item.name}}</span></div>
+<div class="item afmbe-loose-item {{#if (eq item.type 'magazine')}}afmbe-magazine-target{{/if}}" data-item-id="{{item._id}}"><img class="afmbe-item-portrait" src="{{item.img}}" alt="" draggable="false"><span>{{item.name}}</span></div>
 {{/each}}
 </div>
 <div class="item-table"><h3>Off-character stash</h3><p>Gear left at your stash does not count toward carrying weight and cannot be used in combat. The stash follows this character; it has no map location yet.</p>
 {{#each actor.stashedInventory as |item|}}
-<div class="item afmbe-loose-item" data-item-id="{{item._id}}"><img class="afmbe-item-portrait" src="{{item.img}}" alt="" draggable="false"><span>{{item.name}}</span></div>
+<div class="item afmbe-loose-item {{#if (eq item.type 'magazine')}}afmbe-magazine-target{{/if}}" data-item-id="{{item._id}}"><img class="afmbe-item-portrait" src="{{item.img}}" alt="" draggable="false"><span>{{item.name}}</span></div>
 {{/each}}
 </div>

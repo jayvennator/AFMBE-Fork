@@ -41,6 +41,7 @@ export async function loadInternalRound(actor, weapon, ammo) {
     if (!Number.isSafeInteger(count) || count < 1) throw new Error('No loose rounds left.');
     await ammo.update({ 'system.qty': count - 1 });
     await weapon.update({ 'system.capacity.value': rounds + 1, 'system.capacity.max': capacity, 'system.loadedAmmoType': newType });
+    if (count === 1) await actor.deleteEmbeddedDocuments('Item', [ammo.id]);
     const action = await spendAction(actor, 'help');
     const esc = foundry.utils.escapeHTML;
     await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<h2>${esc(actor.name)} loads ${esc(weapon.name)}</h2><p>1 ${esc(ammo.name)} round (${rounds + 1}/${capacity}).${action.tracked ? ` Help action ${action.used}; repeat penalty ${action.penalty}.` : ''}</p>` });

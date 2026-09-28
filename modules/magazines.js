@@ -54,6 +54,7 @@ export async function loadMagazine(actor, magazine, ammunition, amount) {
     ]);
     const weapon = actor.items.get(magazine.system.insertedInWeaponId);
     if (weapon?.system.loadedMagazineId === magazine.id) await weapon.update({ 'system.capacity.value': rounds + amount });
+    if (qty === amount) await actor.deleteEmbeddedDocuments('Item', [ammunition.id]);
     ui.notifications.info(`Loaded ${amount} ${type} round(s) into ${magazine.name}.`);
     return true;
 }

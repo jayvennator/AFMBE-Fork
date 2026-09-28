@@ -7,6 +7,7 @@ import { weaponCategory, feedSystem, compatibleLooseAmmo, loadInternalRound, unl
 import { actionPanel, actionState, spendAction, correctAction } from './action-economy.js';
 import { measureWeaponRange } from './weapon-range.js';
 import { damageType, hitBonus } from './damage-types.js';
+import { normalizeCaliber } from './calibers.js';
 import { activeBonuses, attributeBonus, skillBonus, useConsumable, endConsumableEffect } from './consumables.js';
 import { postArmorRoll } from './armor-damage.js';
 import { promptArmorReplenishment } from './armor-replenishment.js';
@@ -301,6 +302,23 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         html.find('.item').on('dragend', () => {
             this._gridDrag = null
             html.find('.inventory-grid-preview').prop('hidden', true)
+            html.find('.afmbe-magazine-drop-ready').removeClass('afmbe-magazine-drop-ready')
+        })
+        html.find('.afmbe-magazine-target').on('dragover', event => {
+            const source = this.actor.items.get(this._gridDrag?.id)
+            if (source?.type !== 'ammunition') return
+            event.preventDefault(); event.stopPropagation()
+            event.currentTarget.classList.add('afmbe-magazine-drop-ready')
+            event.currentTarget.closest('.afmbe-inventory-grid')?.querySelector('.inventory-grid-preview')?.setAttribute('hidden', '')
+        }).on('dragleave', event => {
+            if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.classList.remove('afmbe-magazine-drop-ready')
+        }).on('drop', event => {
+            const ammo = this.actor.items.get(event.originalEvent.dataTransfer.getData('application/x-afmbe-item'))
+            if (ammo?.type !== 'ammunition') return
+            event.preventDefault(); event.stopPropagation()
+            event.currentTarget.classList.remove('afmbe-magazine-drop-ready')
+            const magazine = this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)
+            this._promptMagazineLoad(magazine, ammo)
         })
         html.find('.afmbe-item-portrait').on('error', event => { event.currentTarget.hidden = true })
         html.find('.inventory-grid-item, .afmbe-loose-item').click(async event => {
@@ -767,11 +785,29 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
     async _onLoadMagazine(event) {
         event.preventDefault();
         const magazine = this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId);
+        this._promptMagazineLoad(magazine)
+    }
+
+    _promptMagazineLoad(magazine, preferredAmmo = null) {
         if (!magazine || !this.actor.isOwner) return;
+        if (inCombat(this.actor)) return ui.notifications.warn('Load loose rounds into magazines outside combat.');
         const esc = foundry.utils.escapeHTML;
-        const ammo = this.actor.items.filter(item => item.type === 'ammunition' && Number(item.system.qty) > 0);
-        if (!ammo.length) { ui.notifications.warn('Create loose ammunition first.'); return; }
-        new Dialog({ title: `Load: ${magazine.name}`, content: `<form><label>Loose ammunition</label><select name="ammo">${ammo.map(item => `<option value="${esc(item.id)}">${esc(item.name)} — ${item.system.qty} (${esc(item.system.caliber)}, ${esc(item.system.ammoType)})</option>`).join('')}</select><label>Rounds to load</label><input type="number" name="amount" min="1" step="1" value="1"></form>`,
+        const remaining = Number(magazine.system.capacity) - Number(magazine.system.rounds);
+        if (!Number.isSafeInteger(remaining) || remaining < 1) return ui.notifications.warn('This magazine is full or its capacity is not configured.');
+        const caliber = normalizeCaliber(magazine.system.caliber);
+        const ammo = this.actor.items.filter(item => item.type === 'ammunition' && Number(item.system.qty) > 0 &&
+            caliber && normalizeCaliber(item.system.caliber) === caliber &&
+            (!Number(magazine.system.rounds) || damageType(item.system.ammoType) === damageType(magazine.system.ammoType)) &&
+            (!preferredAmmo || item.id === preferredAmmo.id));
+        if (!ammo.length) return ui.notifications.warn('No compatible loose rounds. Check caliber and the ammunition already inside the magazine.');
+        const initial = Math.min(remaining, Number(ammo[0].system.qty));
+        new Dialog({ title: `Load: ${magazine.name}`, content: `<form><p>${Number(magazine.system.rounds)} / ${Number(magazine.system.capacity)} rounds. ${remaining} space left.</p><label>Loose ammunition</label><select name="ammo">${ammo.map(item => `<option value="${esc(item.id)}">${esc(item.name)} — ${item.system.qty} (${esc(item.system.caliber)}, ${esc(item.system.ammoType)})</option>`).join('')}</select><label>Rounds to load</label><input type="number" name="amount" min="1" max="${remaining}" step="1" value="${initial}"></form>`,
+            render: html => html.find('[name="ammo"]').on('change', event => {
+                const chosen = this.actor.items.get(event.currentTarget.value)
+                const amount = html[0].querySelector('[name="amount"]')
+                amount.max = String(Math.min(remaining, Number(chosen?.system.qty) || 0))
+                amount.value = amount.max
+            }),
             buttons: { cancel: { label: 'Cancel' }, load: { label: 'Load rounds', callback: async html => {
                 const form = html[0].querySelector('form');
                 try { await loadMagazine(this.actor, magazine, this.actor.items.get(form.elements.ammo.value), Number(form.elements.amount.value)); }
@@ -979,6 +1015,10 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                             weaponUuid: weapon.uuid, weaponName: weapon.name, damageType: firedDamageType, total, location: hitLocation,
                             melee: isMelee, roundsFired: firing.rounds, hits, firingMode: firing.mode, status: success ? 'pending' : 'miss', blocked: false
                         } } } })
+                    if (feed === 'direct' && Number(looseProjectile.system.qty) === 0)
+                        await this.actor.deleteEmbeddedDocuments('Item', [looseProjectile.id])
+                    if (feed === 'direct' && Number(looseProjectile.system.qty) === 0)
+                        await this.actor.deleteEmbeddedDocuments('Item', [looseProjectile.id])
                     try {
                         const previous = this.actor.getFlag('afmbe-left-behind', 'attackDefaults') ?? {}
                         await this.actor.setFlag('afmbe-left-behind', 'attackDefaults', { ...previous,
@@ -1209,6 +1249,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         if (['weapon', 'armor', 'item', 'backpack', 'rig'].includes(item.type))
             add(item.system.equipped ? 'Unequip' : 'Equip', () => this._setInventoryEquipped(item, !item.system.equipped))
         if (item.type === 'consumable') add('Use', () => useConsumable(item))
+        if (item.type === 'magazine') add('Load ammunition', () => this._promptMagazineLoad(item))
         if (item.type === 'weapon' && item.system.loadedMagazineId && item.system.equipped)
             add('Remove magazine (1 Help)', () => removeMagazine(this.actor, item))
         if (item.type === 'attachment' && item.system.installedWeaponId)
