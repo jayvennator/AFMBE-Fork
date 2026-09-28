@@ -18,11 +18,13 @@ export function damageModifiers(value) {
         default: return { armor: 1, hp: 1 };
     }
 }
-export function resolveDamage(rawDamage, armorRoll, type) {
+export function resolveDamage(rawDamage, armorRoll, type, { headshot = false } = {}) {
     const { armor, hp } = damageModifiers(type);
     const melee = ['twoHanded', 'slashing', 'stabbing'].includes(damageType(type));
     const adjustedDamage = rawDamage + (melee ? 1 : 0);
     const protection = Math.ceil(Math.max(0, armorRoll) * armor);
     const penetrating = Math.max(0, adjustedDamage - protection);
-    return { protection, penetrating, hpDamage: penetrating * hp, armorMultiplier: armor, damageMultiplier: hp, meleeBonus: melee ? 1 : 0 };
+    // Headshots replace the ammunition's HP multiplier; armor and its ammo-type modifier still apply.
+    const damageMultiplier = headshot ? 2 : hp;
+    return { protection, penetrating, hpDamage: penetrating * damageMultiplier, armorMultiplier: armor, damageMultiplier, meleeBonus: melee ? 1 : 0 };
 }

@@ -67,14 +67,15 @@ export async function applyArmorDamage(message) {
                 if (value === 0 && state.value > 0) broken.add(item.name);
             }
             if (!coveringItems) await postArmorRoll(actor, null, await new Roll('0').evaluate(), '0');
-            const resolved = resolveDamage(raw, protection, type);
-            results.push({ raw, protection, damage: data.blocked ? Math.floor(resolved.hpDamage / 2) : resolved.hpDamage });
+            const resolved = resolveDamage(raw, protection, type, { headshot: location === 'head' });
+            results.push({ raw, protection: resolved.protection, penetrating: resolved.penetrating,
+                multiplier: resolved.damageMultiplier, damage: data.blocked ? Math.floor(resolved.hpDamage / 2) : resolved.hpDamage });
         }
         const total = results.reduce((sum, hit) => sum + hit.damage, 0);
         if (integrity.size) await actor.updateEmbeddedDocuments('Item', [...integrity].map(([id, state]) => ({ _id: id, 'system.armor_integrity.value': state.value })));
         await actor.update({ 'system.secondaryAttributes.hp.value': hp - total }, { enforceTypes: false });
         await message.update({ [`flags.${SYSTEM_ID}.armorDamage.applied`]: true });
-        const lines = results.map((hit, index) => `Hit ${index + 1}: ${hit.raw} raw, ${hit.protection} armor, ${hit.damage} HP`).join('<br>');
+        const lines = results.map((hit, index) => `Hit ${index + 1}: ${hit.raw} raw, ${hit.protection} armor after ammo type, ${hit.penetrating} penetrates ×${hit.multiplier}${data.blocked ? ', then blocked' : ''} = ${hit.damage} HP`).join('<br>');
         await ChatMessage.create({ user: game.user.id, speaker: ChatMessage.getSpeaker({ actor }),
             content: `<h2>Damage Calculation</h2><p><strong>${foundry.utils.escapeHTML(actor.name)} — ${location}</strong><br>Type ${foundry.utils.escapeHTML(type)}${data.blocked ? '; blocked' : ''}<br>${lines}<br>Total ${total} HP; HP ${hp} → ${hp - total}${broken.size ? `<br>Armor depleted: ${[...broken].map(name => foundry.utils.escapeHTML(name)).join(', ')}` : ''}</p>` });
     } catch (error) {
