@@ -13,7 +13,7 @@ import { promptArmorReplenishment } from './armor-replenishment.js';
 import { armorIntegrity } from './armor-integrity.js';
 import { attachmentModifiers, promptInstallAttachment, removeAttachment } from './attachments.js';
 import { SKILL_CATEGORIES, skillCategory } from './skill-categories.js';
-import { containers, dimensions, firstFreeCell, moveInventoryItem, unpackItem, splitInventoryStack, storageLocation, inCombat } from './inventory-grid.js';
+import { containers, dimensions, firstFreeCell, nearestFreeCell, moveInventoryItem, unpackItem, splitInventoryStack, storageLocation, inCombat } from './inventory-grid.js';
 import { loadedMagazine, compatibleMagazines, reloadWeapon, loadMagazine } from './magazines.js';
 
 export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
@@ -187,7 +187,9 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         actorData.selectedInventoryItem = selected ? { ...selected,
             canEquip: ['weapon', 'armor', 'item', 'backpack', 'rig'].includes(selected.type),
             canUse: selected.type === 'consumable', stored: Boolean(storageLocation(selected)),
-            canSplit: ['ammunition', 'consumable', 'item'].includes(selected.type) && Number(selected.system.qty) > 1
+            canSplit: ['ammunition', 'consumable', 'item'].includes(selected.type) && Number(selected.system.qty) > 1,
+            canRotate: dimensions(selected).width !== dimensions(selected).height,
+            footprint: dimensions(selected)
         } : null
         actorData.attachment = attachment
         actorData.consumable = consumable
@@ -247,9 +249,36 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             try { await this._setInventoryEquipped(item, !item?.system.equipped) }
             catch (error) { ui.notifications.warn(error.message) }
         })
-        html.find('.afmbe-inventory-grid').on('dragover', event => event.preventDefault())
+        html.find('.afmbe-inventory-grid').on('dragover', event => {
+            event.preventDefault()
+            const item = this.actor.items.get(this._gridDrag?.id)
+            const preview = event.currentTarget.querySelector('.inventory-grid-preview')
+            if (!item || !preview) return
+            const rotated = Boolean(item.system.storage?.rotated) !== Boolean(event.originalEvent.shiftKey)
+            const placement = this._inventoryDropPosition(event.currentTarget, item, event.originalEvent, rotated)
+            if (!placement) { preview.hidden = true; return }
+            const size = dimensions(item, rotated)
+            preview.hidden = false
+            preview.classList.toggle('invalid', !placement.cell)
+            preview.style.left = `${placement.x * placement.cellWidth}px`
+            preview.style.top = `${placement.y * placement.cellHeight}px`
+            preview.style.width = `${size.width * placement.cellWidth}px`
+            preview.style.height = `${size.height * placement.cellHeight}px`
+        })
         html.find('.item').attr('draggable', 'true').on('dragstart', event => {
-            event.originalEvent.dataTransfer.setData('application/x-afmbe-item', event.currentTarget.closest('.item')?.dataset.itemId ?? '')
+            const item = this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)
+            if (!item) return
+            const source = event.currentTarget.closest('.inventory-grid-item')
+            const size = dimensions(item)
+            const rect = source?.getBoundingClientRect()
+            this._gridDrag = { id: item.id, fromGrid: Boolean(source), rotated: Boolean(item.system.storage?.rotated),
+                x: rect ? Math.max(0, Math.min(size.width - 1, Math.floor((event.originalEvent.clientX - rect.left) / (rect.width / size.width)))) : 0,
+                y: rect ? Math.max(0, Math.min(size.height - 1, Math.floor((event.originalEvent.clientY - rect.top) / (rect.height / size.height)))) : 0 }
+            event.originalEvent.dataTransfer.setData('application/x-afmbe-item', item.id)
+        })
+        html.find('.item').on('dragend', () => {
+            this._gridDrag = null
+            html.find('.inventory-grid-preview').prop('hidden', true)
         })
         html.find('.inventory-grid-item, .afmbe-loose-item').click(async event => {
             if (event.target.closest('button')) return
@@ -263,10 +292,11 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             const source = this.actor.items.get(event.originalEvent.dataTransfer.getData('application/x-afmbe-item'))
             const grid = event.currentTarget
             if (!source) return
-            const rect = grid.getBoundingClientRect()
-            const x = Math.floor((event.originalEvent.clientX - rect.left) / (rect.width / Number(grid.dataset.width)))
-            const y = Math.floor((event.originalEvent.clientY - rect.top) / 38)
-            try { await moveInventoryItem(this.actor, source, grid.dataset.containerId, x, y, event.originalEvent.shiftKey) }
+            const rotated = Boolean(source.system.storage?.rotated) !== Boolean(event.originalEvent.shiftKey)
+            const placement = this._inventoryDropPosition(grid, source, event.originalEvent, rotated)
+            grid.querySelector('.inventory-grid-preview').hidden = true
+            if (!placement?.cell) return ui.notifications.warn('No nearby free space for this item. Rotate it or move another item first.')
+            try { await moveInventoryItem(this.actor, source, grid.dataset.containerId, placement.cell.x, placement.cell.y, rotated) }
             catch (error) { ui.notifications.warn(error.message) }
         })
         html.find('.afmbe-equip-slot').on('dragover', event => event.preventDefault())
@@ -290,6 +320,11 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         })
         html.find('.inventory-unpack').click(async event => {
             try { await unpackItem(this.actor, this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)) }
+            catch (error) { ui.notifications.warn(error.message) }
+        })
+        html.find('.inventory-rotate').click(async event => {
+            const item = this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)
+            try { await this._rotateInventoryItem(item) }
             catch (error) { ui.notifications.warn(error.message) }
         })
         html.find('.inventory-split').click(async event => {
@@ -1054,6 +1089,39 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         await item.update({ 'system.equipped': equipped })
     }
 
+    _inventoryDropPosition(grid, item, pointer, rotated) {
+        const firstCell = grid.querySelector('.inventory-grid-cell')
+        if (!firstCell) return null
+        const rect = grid.getBoundingClientRect()
+        const cellWidth = firstCell.getBoundingClientRect().width
+        const cellHeight = firstCell.getBoundingClientRect().height
+        if (!cellWidth || !cellHeight) return null
+        const grabbed = this._gridDrag?.id === item.id ? this._gridDrag : { x: 0, y: 0 }
+        const turned = grabbed.fromGrid && grabbed.rotated !== rotated
+        const originalSize = dimensions(item, grabbed.rotated)
+        const grabX = turned ? grabbed.y : grabbed.x
+        const grabY = turned ? originalSize.width - 1 - grabbed.x : grabbed.y
+        const x = Math.floor((pointer.clientX - rect.left) / cellWidth) - grabX
+        const y = Math.floor((pointer.clientY - rect.top) / cellHeight) - grabY
+        const cell = nearestFreeCell(this.actor, item, grid.dataset.containerId, x, y, rotated)
+        const size = dimensions(item, rotated)
+        const maxX = Math.max(0, Number(grid.dataset.width) - size.width)
+        const maxY = Math.max(0, grid.querySelectorAll('.inventory-grid-cell').length / Number(grid.dataset.width) - size.height)
+        return { cell, x: cell?.x ?? Math.max(0, Math.min(maxX, x)),
+            y: cell?.y ?? Math.max(0, Math.min(maxY, y)), cellWidth, cellHeight }
+    }
+
+    async _rotateInventoryItem(item) {
+        if (!item?.isOwner) throw new Error('Item is unavailable.')
+        const rotated = !Boolean(item.system.storage?.rotated)
+        const location = storageLocation(item)
+        if (!location) return item.update({ 'system.storage.rotated': rotated })
+        const cell = nearestFreeCell(this.actor, item, location,
+            Number(item.system.storage?.x) || 0, Number(item.system.storage?.y) || 0, rotated, 3)
+        if (!cell) throw new Error('No space to rotate this item here. Move it to another container first.')
+        await moveInventoryItem(this.actor, item, location, cell.x, cell.y, rotated)
+    }
+
     async _onToggleEquipped(event) {
         event.preventDefault()
         const item = this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)
@@ -1072,6 +1140,8 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         if (['weapon', 'armor', 'item', 'backpack', 'rig'].includes(item.type))
             add(item.system.equipped ? 'Unequip' : 'Equip', () => this._setInventoryEquipped(item, !item.system.equipped))
         if (item.type === 'consumable') add('Use', () => useConsumable(item))
+        if (dimensions(item).width !== dimensions(item).height)
+            add('Rotate 90°', () => this._rotateInventoryItem(item))
         if (storageLocation(item)) add('Take out', () => unpackItem(this.actor, item))
         for (const container of containers(this.actor)) {
             if (container.type && !container.equipped) continue

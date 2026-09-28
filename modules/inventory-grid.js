@@ -34,7 +34,7 @@ export function canCarryQuick(item) {
     return ['magazine', 'ammunition', 'consumable', 'attachment'].includes(item.type) ||
         (item.type === 'item' && Boolean(item.system.quickAccess));
 }
-export function placementError(actor, item, targetId, x, y, rotated = false) {
+export function placementError(actor, item, targetId, x, y, rotated = Boolean(item?.system.storage?.rotated)) {
     if (!actor?.isOwner || !item || item.parent?.uuid !== actor.uuid) return 'Item is unavailable.';
     const target = ownedContainer(actor, targetId);
     if (!target) return 'Equip a backpack or rig before placing items in it.';
@@ -55,17 +55,35 @@ export function placementError(actor, item, targetId, x, y, rotated = false) {
     }
     return null;
 }
-export function firstFreeCell(actor, item, targetId, rotated = false) {
+export function firstFreeCell(actor, item, targetId, rotated = Boolean(item?.system.storage?.rotated)) {
     const target = ownedContainer(actor, targetId);
     if (!target) return null;
     for (let y = 0; y < target.height; y++) for (let x = 0; x < target.width; x++)
         if (!placementError(actor, item, targetId, x, y, rotated)) return { x, y };
     return null;
 }
-export async function moveInventoryItem(actor, item, targetId, x, y, rotated = false) {
+export function nearestFreeCell(actor, item, targetId, x, y, rotated = Boolean(item?.system.storage?.rotated), radius = 2) {
+    const target = ownedContainer(actor, targetId);
+    if (!target) return null;
+    const size = dimensions(item, rotated);
+    if (size.width > target.width || size.height > target.height) return null;
+    const cx = Math.max(0, Math.min(target.width - size.width, Math.floor(x)));
+    const cy = Math.max(0, Math.min(target.height - size.height, Math.floor(y)));
+    const candidates = [];
+    for (let row = 0; row <= target.height - size.height; row++)
+        for (let col = 0; col <= target.width - size.width; col++) {
+            const distance = Math.abs(cx - col) + Math.abs(cy - row);
+            if (distance <= radius) candidates.push({ x: col, y: row, distance });
+        }
+    candidates.sort((a, b) => a.distance - b.distance || a.y - b.y || a.x - b.x);
+    return candidates.find(cell => !placementError(actor, item, targetId, cell.x, cell.y, rotated)) ?? null;
+}
+export async function moveInventoryItem(actor, item, targetId, x, y, rotated = Boolean(item?.system.storage?.rotated)) {
     const error = placementError(actor, item, targetId, x, y, rotated);
     if (error) throw new Error(error);
     const old = storageLocation(item);
+    if (old === targetId && Number(item.system.storage?.x) === x && Number(item.system.storage?.y) === y &&
+        Boolean(item.system.storage?.rotated) === Boolean(rotated)) return;
     // Packing or retrieving from a backpack is deliberate; items in rigs and pockets stay ready.
     if (inCombat(actor) && (actor.items.get(old)?.type === 'backpack' || actor.items.get(targetId)?.type === 'backpack')) await spendAction(actor, 'help');
     await item.update({ 'system.storage.containerId': targetId, 'system.storage.x': x,
@@ -78,7 +96,7 @@ export async function unpackItem(actor, item) {
     if (!actor?.isOwner || item?.parent?.uuid !== actor.uuid) return;
     const old = storageLocation(item);
     if (inCombat(actor) && actor.items.get(old)?.type === 'backpack') await spendAction(actor, 'help');
-    await item.update({ 'system.storage.containerId': '', 'system.storage.x': 0, 'system.storage.y': 0, 'system.storage.rotated': false });
+    await item.update({ 'system.storage.containerId': '', 'system.storage.x': 0, 'system.storage.y': 0 });
     if (inCombat(actor) && actor.items.get(old)?.type === 'backpack')
         await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<p>${foundry.utils.escapeHTML(actor.name)} retrieves ${foundry.utils.escapeHTML(item.name)} from a backpack (Help action).</p>` });
 }

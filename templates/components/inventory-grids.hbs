@@ -1,17 +1,19 @@
 <div class="item-table">
     <h2>Pockets and containers</h2>
-    <p>Drag items between grids or onto an equipment slot. Hold Shift on drop to rotate. Right-click an item for more actions. Retrieving from a backpack costs a Help action in combat.</p>
+    <p>Click an item for actions, including Rotate. Drag it between grids; the highlighted space shows where it will land. Hold Shift while dragging to rotate temporarily. Retrieving from a backpack costs a Help action in combat.</p>
     <div class="afmbe-selected-item">
     {{#if actor.selectedInventoryItem}}
         <div class="item" data-item-id="{{actor.selectedInventoryItem._id}}"><strong>{{actor.selectedInventoryItem.name}}</strong>
         {{#if actor.selectedInventoryItem.canEquip}}<button type="button" class="inventory-equip">{{#if actor.selectedInventoryItem.system.equipped}}Unequip{{else}}Equip{{/if}}</button>{{/if}}
         {{#if actor.selectedInventoryItem.canUse}}<button type="button" class="use-consumable">Use</button>{{/if}}
+        {{#if actor.selectedInventoryItem.canRotate}}<button type="button" class="inventory-rotate" title="Turn this item 90 degrees">Rotate ↻</button>{{/if}}
         {{#if actor.selectedInventoryItem.stored}}<button type="button" class="inventory-unpack">Take out</button>{{/if}}
         {{#if actor.selectedInventoryItem.canSplit}}<button type="button" class="inventory-split">Split stack</button>{{/if}}
         {{#each actor.inventoryGrids as |container|}}
         {{#if container.equipped}}<button type="button" class="inventory-autopack" data-container-id="{{container.id}}">To {{container.label}}</button>{{else}}{{#unless container.type}}<button type="button" class="inventory-autopack" data-container-id="{{container.id}}">To pockets</button>{{/unless}}{{/if}}
         {{/each}}
-        <button type="button" class="inventory-open">Item details</button></div>
+        <button type="button" class="inventory-open">Item details</button>
+        <small>Size {{actor.selectedInventoryItem.footprint.width}}×{{actor.selectedInventoryItem.footprint.height}}</small></div>
     {{else}}<span>Click an item to see Equip, Use, and Move actions here.</span>{{/if}}
     </div>
     {{#each actor.backpack as |item|}}
@@ -37,6 +39,7 @@
     <div class="item inventory-grid-item" data-item-id="{{stored.id}}" title="{{stored.name}} ({{stored.width}}×{{stored.height}}) — click for actions or drag to move" style="grid-column:{{stored.column}} / span {{stored.width}};grid-row:{{stored.row}} / span {{stored.height}}"><span class="item-label">{{stored.name}}</span>
     {{#if stored.qty}}<small>×{{stored.qty}}</small>{{/if}}</div>
     {{/each}}
+    <div class="inventory-grid-preview" hidden></div>
 </div></div>
 {{/each}}
 <div class="item-table"><h3>Loose gear</h3><p>Items here have no quick-access slot. Equip weapons or armor; put small supplies in pockets or the rig.</p>

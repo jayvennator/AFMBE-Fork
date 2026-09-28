@@ -682,9 +682,11 @@
 }
 .afmbe-left-behind .afmbe-inventory-grid {
     display: grid;
-    grid-template-columns: repeat(var(--inventory-columns), minmax(36px, 1fr));
+    position: relative;
+    grid-template-columns: repeat(var(--inventory-columns), 36px);
     grid-auto-rows: 38px;
-    max-width: 510px;
+    width: max-content;
+    max-width: none;
     margin: 0.4rem 0 1rem;
 }
 .afmbe-left-behind .inventory-grid-cell {
@@ -692,6 +694,9 @@
     background: rgba(100,100,100,0.08);
 }
 .afmbe-left-behind .inventory-grid-cell:hover { background: rgba(100,150,220,0.3); }
+.afmbe-left-behind .inventory-grid-preview { position: absolute; pointer-events: none; z-index: 3; border: 2px solid #45c975; background: rgba(69,201,117,0.26); }
+.afmbe-left-behind .inventory-grid-preview.invalid { border-color: #e66a60; background: rgba(230,106,96,0.3); }
+.afmbe-left-behind .inventory-grid-preview[hidden] { display: none; }
 .afmbe-left-behind .inventory-grid-item {
     z-index: 1;
     border: 1px solid #888;
@@ -704,6 +709,7 @@
 }
 .afmbe-left-behind .afmbe-loadout { display: grid; grid-template-columns: minmax(180px, 0.42fr) minmax(0, 1fr); gap: 0.8rem; align-items: start; }
 .afmbe-left-behind .afmbe-loadout-slots, .afmbe-left-behind .afmbe-loadout-storage { min-width: 0; }
+.afmbe-left-behind .afmbe-loadout-storage { overflow-x: auto; }
 .afmbe-left-behind .afmbe-equip-slot { border: 1px solid #888; padding: 0.45rem; margin-bottom: 0.5rem; min-height: 66px; }
 .afmbe-left-behind .afmbe-equip-slot > strong { display: block; border-bottom: 1px solid #888; margin-bottom: 0.3rem; }
 .afmbe-left-behind .afmbe-equip-slot .item, .afmbe-left-behind .inventory-grid-item { overflow-wrap: anywhere; }
