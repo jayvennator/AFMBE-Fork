@@ -752,6 +752,8 @@
 .afmbe-item-portrait[hidden] { display: none !important; }
 .afmbe-inventory-menu button { width: 100%; padding: 4px 8px; text-align: left; color: #eee; background: transparent; border: 0; cursor: pointer; }
 .afmbe-inventory-menu button:hover { background: #526577; }
+.afmbe-inventory-menu .afmbe-inventory-menu-danger { border-top: 1px solid #79828d; color: #ffaaa5; }
+.afmbe-inventory-menu .afmbe-inventory-menu-danger:hover { background: #6f3438; color: #fff; }
 .afmbe-left-behind .weapon-attachment-section { padding: 0.4rem 0.75rem 0.75rem; }
 .afmbe-left-behind .weapon-attachment-slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 0.4rem; }
 .afmbe-left-behind .weapon-attachment-slot { border: 1px solid #888; min-height: 72px; padding: 0.3rem; }

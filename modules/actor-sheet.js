@@ -407,12 +407,10 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         })
 
         // Delete Inventory Item
-        html.find('.item-delete').click(ev => {
-            const li = ev.currentTarget.closest(".item");
-            const removed = this.actor.items.get(li.dataset.itemId);
-            if (['backpack','rig'].includes(removed?.type) && this.actor.items.filter(entry => storageLocation(entry) === removed.id).length)
-                return ui.notifications.warn('Empty this container before deleting it.');
-            this.actor.deleteEmbeddedDocuments("Item", [li.dataset.itemId]);
+        html.find('.item-delete').click(async ev => {
+            const item = this.actor.items.get(ev.currentTarget.closest('.item')?.dataset.itemId)
+            try { await this._deleteInventoryItem(item) }
+            catch (error) { ui.notifications.warn(error.message) }
         });
     }
 
@@ -1164,6 +1162,27 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         catch (error) { ui.notifications.warn(error.message) }
     }
 
+    async _deleteInventoryItem(item, { confirm = false } = {}) {
+        if (!item?.isOwner || item.parent?.uuid !== this.actor.uuid) throw new Error('Item is unavailable.')
+        const checkContainer = () => {
+            if (['backpack', 'rig'].includes(item.type) &&
+                this.actor.items.filter(entry => storageLocation(entry) === item.id).length)
+                throw new Error('Empty this container before deleting it.')
+        }
+        checkContainer()
+        if (confirm) {
+            const approved = await Dialog.confirm({
+                title: 'Delete item',
+                content: `<p>Delete <strong>${foundry.utils.escapeHTML(item.name)}</strong> from ${foundry.utils.escapeHTML(this.actor.name)}? This cannot be undone.</p>`
+            })
+            if (!approved) return
+        }
+        if (!this.actor.items.get(item.id)) throw new Error('Item is no longer on this character.')
+        checkContainer()
+        await this.actor.deleteEmbeddedDocuments('Item', [item.id])
+        if (this._selectedInventoryItemId === item.id) this._selectedInventoryItemId = null
+    }
+
     _showInventoryMenu(item, pointer) {
         this._inventoryMenuAbort?.abort()
         this._inventoryMenu?.remove()
@@ -1182,7 +1201,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         header.append(portrait, name)
         menu.append(header)
         const actions = []
-        const add = (label, run) => actions.push({ label, run })
+        const add = (label, run, danger = false) => actions.push({ label, run, danger })
         if (['weapon', 'armor', 'item', 'backpack', 'rig'].includes(item.type))
             add(item.system.equipped ? 'Unequip' : 'Equip', () => this._setInventoryEquipped(item, !item.system.equipped))
         if (item.type === 'consumable') add('Use', () => useConsumable(item))
@@ -1206,6 +1225,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         if (['ammunition', 'consumable', 'item'].includes(item.type) && Number(item.system.qty) > 1)
             add('Split stack', () => splitInventoryStack(this.actor, item))
         add('Open item sheet', () => item.sheet.render(true))
+        add('Delete item…', () => this._deleteInventoryItem(item, { confirm: true }), true)
         const abort = new AbortController()
         this._inventoryMenuAbort = abort
         this._inventoryMenu = menu
@@ -1213,6 +1233,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         for (const action of actions) {
             const button = document.createElement('button')
             button.type = 'button'; button.textContent = action.label
+            if (action.danger) button.classList.add('afmbe-inventory-menu-danger')
             button.addEventListener('click', async event => {
                 event.preventDefault(); event.stopPropagation(); close()
                 try { await action.run() } catch (error) { ui.notifications.warn(error.message) }
