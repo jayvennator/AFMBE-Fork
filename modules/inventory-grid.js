@@ -12,7 +12,7 @@ export const isStashed = (actor, item) => storageLocation(item) === STASH ||
         storageLocation(actor.items.get(item.system.insertedInWeaponId || item.system.installedWeaponId)) === STASH);
 export const isPhysicalItem = item => !['backpack', 'rig', 'skill', 'quality', 'drawback', 'power', 'aspect'].includes(item.type);
 export const isLooseItem = item => isPhysicalItem(item) && !(item.type === 'ammunition' && Number(item.system.qty) <= 0) &&
-    !item.system.equipped && !storageLocation(item) &&
+    !item.system.equipped && !storageLocation(item) && !item.getFlag?.('afmbe-left-behind', 'droppedAt') &&
     !(item.type === 'magazine' && item.system.insertedInWeaponId) &&
     !(item.type === 'attachment' && item.system.installedWeaponId);
 export const handCount = actor => actor.items.filter(isLooseItem).length;
@@ -53,6 +53,7 @@ export function canCarryQuick(item) {
 }
 export function placementError(actor, item, targetId, x, y, rotated = Boolean(item?.system.storage?.rotated)) {
     if (!actor?.isOwner || !item || item.parent?.uuid !== actor.uuid) return 'Item is unavailable.';
+    if (item.getFlag('afmbe-left-behind', 'droppedAt')) return 'Pick up this dropped weapon first.';
     if (storageLocation(item) === STASH && inCombat(actor)) return 'Stashed gear is off character and cannot be retrieved in combat.';
     const target = ownedContainer(actor, targetId);
     if (!target) return 'Equip a backpack or rig before placing items in it.';
@@ -127,6 +128,7 @@ export async function unpackItem(actor, item) {
 }
 export async function stashItem(actor, item) {
     if (!actor?.isOwner || item?.parent?.uuid !== actor.uuid || !isPhysicalItem(item)) throw new Error('This item cannot be stashed.');
+    if (item.getFlag('afmbe-left-behind', 'droppedAt')) throw new Error('Pick up this dropped weapon first.');
     if (inCombat(actor)) throw new Error('Your off-character stash is unavailable in combat.');
     if (item.system.equipped || item.system.insertedInWeaponId || item.system.installedWeaponId)
         throw new Error('Unequip, unload, or detach this item before stashing it.');

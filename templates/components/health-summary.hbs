@@ -5,4 +5,5 @@
     <div><strong>Essence</strong><span>{{actor.system.secondaryAttributes.essence.value}} / {{actor.system.secondaryAttributes.essence.max}}</span></div>
     <div><strong>Speed</strong><span>{{actor.system.secondaryAttributes.speed.halfValue}} m/sec</span></div>
     {{#if actor.legInjury}}<p class="afmbe-health-alert">Leg Injury · combat movement halved</p>{{/if}}
+    {{#if actor.armInjury}}<p class="afmbe-health-alert">Arm Injury · attacks −2</p>{{/if}}
 </div>

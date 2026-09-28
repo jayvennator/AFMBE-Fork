@@ -1,6 +1,7 @@
 import { SKILL_CATEGORIES, skillCategory } from './skill-categories.js';
 import { toggleCoverStance } from './region-cover.js';
-import { hasLegInjury, clearLegInjury, treatLegInjury } from './leg-injury.js';
+import { hasLegInjury, clearLegInjury, treatLegInjury, hasArmInjury, clearArmInjury, treatArmInjury } from './leg-injury.js';
+import { droppedAt, pickUpWeapon } from './dropped-weapons.js';
 
 export class afmbeCreatureSheet extends foundry.appv1.sheets.ActorSheet {
 
@@ -26,6 +27,7 @@ export class afmbeCreatureSheet extends foundry.appv1.sheets.ActorSheet {
     getData() {
         const data = super.getData();
         data.actor.legInjury = hasLegInjury(this.actor);
+        data.actor.armInjury = hasArmInjury(this.actor);
         data.isGM = game.user.isGM;
         data.editable = data.options.editable;
         const actorData = data.system;
@@ -91,6 +93,7 @@ export class afmbeCreatureSheet extends foundry.appv1.sheets.ActorSheet {
         actorData.item = item
         actorData.equippedItem = equippedItem
         actorData.weapon = weapon
+        actorData.droppedWeapons = weapon.filter(entry => droppedAt(this.actor.items.get(entry._id ?? entry.id)))
         actorData.armor = armor
         actorData.skill = skill
         actorData.skillGroups = Object.entries(SKILL_CATEGORIES).map(([key, label]) =>
@@ -123,6 +126,16 @@ export class afmbeCreatureSheet extends foundry.appv1.sheets.ActorSheet {
         })
         html.find('.treat-leg-injury').click(async () => {
             try { await treatLegInjury(this.actor); } catch (error) { ui.notifications.warn(error.message); }
+        })
+        html.find('.clear-arm-injury').click(async () => {
+            try { await clearArmInjury(this.actor); } catch (error) { ui.notifications.warn(error.message); }
+        })
+        html.find('.treat-arm-injury').click(async () => {
+            try { await treatArmInjury(this.actor); } catch (error) { ui.notifications.warn(error.message); }
+        })
+        html.find('.pick-up-weapon').click(async event => {
+            try { await pickUpWeapon(this.actor, this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)); }
+            catch (error) { ui.notifications.warn(error.message); }
         })
         if (this.actor.isOwner) html.find('.damage-roll').click(this._onDamageRoll.bind(this))
         html.find('.toggleEquipped').click(this._onToggleEquipped.bind(this))

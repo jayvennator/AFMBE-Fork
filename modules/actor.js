@@ -228,6 +228,7 @@ export class afmbeActor extends Actor {
       const qty = item.system.qty != undefined ? Number(item.system.qty) : 1
       const weight = Number(item.system.encumbrance)
       if (isStashed(this, item)) continue
+      if (item.getFlag('afmbe-left-behind', 'droppedAt')) continue
       if (Number.isFinite(qty) && Number.isFinite(weight)) total += Math.max(0, weight) * Math.max(0, qty)
     }
 

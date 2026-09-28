@@ -13,7 +13,8 @@ import { applyArmorDamage } from "./armor-damage.js";
 import { registerRegionCoverControls } from './region-cover.js';
 import { renderSuppressiveFire, handleSuppressionResponse } from './suppressive-fire.js';
 import { registerCombatMovement } from './combat-movement.js';
-import { LEG_INJURY, handleLegTreatment } from './leg-injury.js';
+import { LEG_INJURY, ARM_INJURY, handleLegTreatment } from './leg-injury.js';
+import { handleDroppedWeaponPickup } from './dropped-weapons.js';
 
 registerRegionCoverControls();
 registerCombatMovement();
@@ -25,6 +26,7 @@ registerCombatMovement();
 Hooks.once("init", async function () {
     console.log(`Initializing AFMBE System`);
     CONFIG.statusEffects.push({ id: LEG_INJURY, name: 'Leg Injury', img: 'systems/afmbe-left-behind/images/leg-injury.svg' });
+    CONFIG.statusEffects.push({ id: ARM_INJURY, name: 'Arm Injury', img: 'systems/afmbe-left-behind/images/arm-injury.svg' });
     /**
      * Set an initiative formula for the system
      * @type {String}
@@ -97,6 +99,7 @@ Hooks.on('createChatMessage', (message) => {
     if (!game.user.isGM || game.users.activeGM?.id !== game.user.id) return;
     if (message.getFlag('afmbe-left-behind', 'armorDamage')) void applyArmorDamage(message);
     if (message.getFlag('afmbe-left-behind', 'legTreatment')) void handleLegTreatment(message);
+    if (message.getFlag('afmbe-left-behind', 'droppedWeaponPickup')) void handleDroppedWeaponPickup(message);
     if (message.getFlag('afmbe-left-behind', 'defenseResponse')) void handleDefenseResponse(message);
     if (message.getFlag('afmbe-left-behind', 'suppressionResponse')) void handleSuppressionResponse(message);
 });

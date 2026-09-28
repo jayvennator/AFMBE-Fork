@@ -45,6 +45,7 @@
             {{!-- Equipment Tab --}}
             <div class="tab equipment" data-group="primary" data-tab="equipment">
                 {{> "systems/afmbe-left-behind/templates/components/equipment-header.hbs"}}
+                {{#if actor.droppedWeapons.length}}<div class="item-table"><h2>Dropped weapons</h2>{{#each actor.droppedWeapons as |weapon|}}<div class="item" data-item-id="{{weapon._id}}"><img src="{{weapon.img}}" width="32" height="32" alt=""> {{weapon.name}} <button type="button" class="pick-up-weapon">Pick up (Help action)</button></div>{{/each}}</div>{{/if}}
 
                 {{> "systems/afmbe-left-behind/templates/components/weapons.hbs"}}
                 {{> "systems/afmbe-left-behind/templates/components/ammunition.hbs"}}

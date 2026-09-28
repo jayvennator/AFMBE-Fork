@@ -1,7 +1,7 @@
 import { resolveDamage, damageType } from './damage-types.js';
 import { armorIntegrity, armorWear } from './armor-integrity.js';
 import { storageLocation } from './inventory-grid.js';
-import { resolveLegInjury } from './leg-injury.js';
+import { resolveLegInjury, resolveArmInjury } from './leg-injury.js';
 const SYSTEM_ID = 'afmbe-left-behind';
 const applying = new Set();
 
@@ -80,6 +80,7 @@ export async function applyArmorDamage(message) {
         await ChatMessage.create({ user: game.user.id, speaker: ChatMessage.getSpeaker({ actor }),
             content: `<h2>Damage Calculation</h2><p><strong>${foundry.utils.escapeHTML(actor.name)} — ${location}</strong><br>Type ${foundry.utils.escapeHTML(type)}${data.blocked ? '; blocked' : ''}<br>${lines}<br>Total ${total} HP; HP ${hp} → ${hp - total}${broken.size ? `<br>Armor depleted: ${[...broken].map(name => foundry.utils.escapeHTML(name)).join(', ')}` : ''}</p>` });
         if (location === 'legs') await resolveLegInjury(actor, results);
+        if (location === 'arms') await resolveArmInjury(actor, results);
     } catch (error) {
         console.error('AFMBE armor damage failed', error);
         ui.notifications.error(`AFMBE armor damage: ${error.message}`);

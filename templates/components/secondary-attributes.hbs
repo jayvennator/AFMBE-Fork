@@ -1,6 +1,8 @@
 <div class="attribute-container">
     {{#if actor.legInjury}}<p><strong>Leg Injury:</strong> combat movement and Dash allowances halved. {{#if isGM}}<button type="button" class="clear-leg-injury">ZM: clear injury</button>{{/if}}</p>{{/if}}
+    {{#if actor.armInjury}}<p><strong>Arm Injury:</strong> attacks using the arm take −2. {{#if isGM}}<button type="button" class="clear-arm-injury">ZM: clear injury</button>{{/if}}</p>{{/if}}
     <button type="button" class="treat-leg-injury" title="Target one injured token; requires First Aid and spends a Help action">Treat targeted leg injury (First Aid)</button>
+    <button type="button" class="treat-arm-injury" title="Target one injured token; requires First Aid and spends a Help action">Treat targeted arm injury (First Aid)</button>
     <h2>{{localize 'AFMBE.Attributes.Secondary.Title'}}</h2>
     <div class="resource-container">
         <div class="resource">

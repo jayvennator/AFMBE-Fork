@@ -4,6 +4,7 @@ import { attributeBonus, skillBonus } from './consumables.js';
 import { damageType } from './damage-types.js';
 import { weaponCategory } from './weapon-feed.js';
 import { volleyHits } from './fire-modes.js';
+import { disarmWeapon } from './dropped-weapons.js';
 const SYSTEM_ID = 'afmbe-left-behind';
 const resolving = new Set();
 const rolling = new Set();
@@ -113,6 +114,19 @@ export async function rollLinkedDamage(message) {
     if (rolling.has(message.id)) return;
     const attack = message.getFlag(SYSTEM_ID, 'pendingAttack');
     if (!attack || attack.status !== 'ready') return;
+    if (attack.location === 'weapon') {
+        if (!game.user.isGM) return;
+        rolling.add(message.id);
+        try {
+            await message.update({ [`flags.${SYSTEM_ID}.pendingAttack.status`]: 'rolling' });
+            await disarmWeapon(attack);
+            await message.update({ [`flags.${SYSTEM_ID}.pendingAttack.status`]: 'complete' });
+        } catch (error) {
+            await message.update({ [`flags.${SYSTEM_ID}.pendingAttack.status`]: 'ready' });
+            ui.notifications.error(`Could not disarm weapon: ${error.message}`);
+        } finally { rolling.delete(message.id); }
+        return;
+    }
     const attacker = await fromUuid(attack.attackerUuid);
     const weapon = await fromUuid(attack.weaponUuid);
     if (!attacker?.isOwner || !weapon || weapon.parent?.uuid !== attacker.uuid) return;
@@ -159,6 +173,10 @@ export async function renderLinkedAttack(message, root) {
             makeButton('No defense', () => declineDefense(message));
         }
     } else if (attack.status === 'ready') {
+        if (attack.location === 'weapon') {
+            if (game.user.isGM) makeButton('Disarm weapon', () => rollLinkedDamage(message));
+            return;
+        }
         const attacker = await fromUuid(attack.attackerUuid);
         if (attacker?.isOwner) makeButton('Roll damage', () => rollLinkedDamage(message));
     }

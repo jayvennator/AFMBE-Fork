@@ -19,7 +19,8 @@ import { loadedMagazine, compatibleMagazines, reloadWeapon, loadMagazine, unload
 import { coverForAttack, toggleCoverStance } from './region-cover.js';
 import { beginSuppressiveCone } from './suppressive-fire.js';
 import { movementPanel, attemptDash } from './combat-movement.js';
-import { hasLegInjury, treatLegInjury, clearLegInjury } from './leg-injury.js';
+import { hasLegInjury, treatLegInjury, clearLegInjury, hasArmInjury, treatArmInjury, clearArmInjury } from './leg-injury.js';
+import { droppedAt, pickUpWeapon } from './dropped-weapons.js';
 
 export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
 
@@ -154,6 +155,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         actorData.equippedItem = equippedItem
         actorData.weapon = weapon
         actorData.readyWeapons = weapon.filter(entry => entry.system.equipped && !storageLocation(entry))
+        actorData.droppedWeapons = weapon.filter(entry => droppedAt(this.actor.items.get(entry._id ?? entry.id)))
         actorData.readyWeaponSlots = [0, 1].map(index => actorData.readyWeapons[index] ?? null)
         actorData.meleeWeapons = weapon.filter(i => i.weaponCategory === "melee")
         actorData.firearms = weapon.filter(i => i.weaponCategory === "firearm")
@@ -228,6 +230,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         actorData.actionEconomy = actionPanel(this.actor)
         actorData.movement = movementPanel(this.actor)
         actorData.legInjury = hasLegInjury(this.actor)
+        actorData.armInjury = hasArmInjury(this.actor)
         actorData.activeConsumables = activeBonuses(this.actor).map(effect => ({ ...effect, willCrash: effect.phase !== "crash" && Number(effect.crashPenalty) > 0 && Number(effect.crashDuration) > 0 }))
         actorData.power = power
         actorData.quality = quality
@@ -424,6 +427,16 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         });
         html.find('.clear-leg-injury').click(async () => {
             try { await clearLegInjury(this.actor); } catch (error) { ui.notifications.warn(error.message); }
+        });
+        html.find('.clear-arm-injury').click(async () => {
+            try { await clearArmInjury(this.actor); } catch (error) { ui.notifications.warn(error.message); }
+        });
+        html.find('.treat-arm-injury').click(async () => {
+            try { await treatArmInjury(this.actor); } catch (error) { ui.notifications.warn(error.message); }
+        });
+        html.find('.pick-up-weapon').click(async event => {
+            try { await pickUpWeapon(this.actor, this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)); }
+            catch (error) { ui.notifications.warn(error.message); }
         });
         html.find('.spend-action').click(async event => {
             const type = event.currentTarget.dataset.actionType;
@@ -622,6 +635,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                                     </tr>
                                 </tbody>
                             </table>
+                            ${hasArmInjury(this.actor) ? '<label><input type="checkbox" id="useInjuredArm"> Task uses injured arm (−2)</label>' : ''}
                     </div>`
 
         let d = new Dialog({
@@ -646,6 +660,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                         const automatic = traitRollEffects(this.actor, { kind: 'attribute', attribute: attributeKey, skillName: selectedSkill?.name })
                         const qualityValue = manualTraitValue(selectedQuality, automatic)
                         const drawbackValue = manualTraitValue(selectedDrawback, automatic)
+                        const armPenalty = html[0].querySelector('#useInjuredArm')?.checked ? -2 : 0
 
                         let tags = []
                         if (userInputModifier !== 0) { tags.push(`<span class="${userInputModifier >= 0 ? "bonusColorClass" : 'penaltyColorClass'}">${userModifierLabel} ${userInputModifier >= 0 ? "+" : ''}${userInputModifier}</span>`) }
@@ -654,7 +669,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                             tags.push(`<span class="${skillLevel >= 0 ? 'bonusColorClass' : 'penaltyColorClass'}">${selectedSkill.name} ${skillLevel >= 0 ? '+' : ''}${skillLevel}</span>`)
                         }
                         tags.push(`<span>Traits: ${traitSummary(automatic, selectedQuality, selectedDrawback, foundry.utils.escapeHTML)}</span>`)
-                        const rollMod = (attributeValue + skillValue + automatic.total + qualityValue + drawbackValue + userInputModifier)
+                        const rollMod = (attributeValue + skillValue + automatic.total + qualityValue + drawbackValue + userInputModifier + armPenalty)
                         let roll = await new Roll('1d10').evaluate()
                         let totalResult = Number(roll.result) + rollMod
 
@@ -908,7 +923,10 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         const firstTraits = traitRollEffects(this.actor, { kind: 'attack', weaponName: weapon.name, attribute: defaultAttribute,
             skillName: firstSkill?.name, mode: category === 'firearm' ? defaultMode : 'semi' })
         const firstAttachment = attachmentModifiers(this.actor, weapon, { aimed: defaultAttribute === 'perception' })
-        const locationLabel = { body: 'Body (0)', arms: 'Arm (-2)', legs: 'Leg (-2)', head: 'Head (-4)' }[defaultLocation]
+        const locationLabel = { body: 'Body (0)', arms: 'Arm (-2)', legs: 'Leg (-2)', head: 'Head (-4)', weapon: 'Weapon (-3)' }[defaultLocation]
+        const targetAtOpen = [...game.user.targets][0]?.actor;
+        const targetWeapons = targetAtOpen?.items.filter(item => item.type === 'weapon' && item.system.equipped && !droppedAt(item)) ?? [];
+        const targetWeaponOptions = targetWeapons.map(item => `<option value="${escape(item.id)}">${escape(item.name)}</option>`).join('');
         const firstSummary = `Target ${locationLabel} · traits ${firstTraits.total >= 0 ? '+' : ''}${firstTraits.total} · attachments ${firstAttachment.attack >= 0 ? '+' : ''}${firstAttachment.attack}${category === 'firearm' ? ` · mode ${fireMode(defaultMode, weapon).penalty}` : ''}`
         const content = `<form class="afmbe-attack-dialog">
             <div class="form-group"><label>Attribute</label><select name="attribute">${options}</select></div>
@@ -930,7 +948,9 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                     <option value="arms" ${defaultLocation === 'arms' ? 'selected' : ''}>Arm (-2)</option>
                     <option value="legs" ${defaultLocation === 'legs' ? 'selected' : ''}>Leg (-2)</option>
                     <option value="head" ${defaultLocation === 'head' ? 'selected' : ''}>Head (-4)</option>
+                    <option value="weapon" ${defaultLocation === 'weapon' ? 'selected' : ''}>Weapon (-3; disarm)</option>
                 </select></div>
+                <div class="form-group afmbe-target-weapon"><label>Target weapon</label><select name="targetWeapon">${targetWeaponOptions || '<option value="">Target an armed token before opening this dialog</option>'}</select></div>
                 <div class="form-group"><label>Quality</label><select name="quality"><option value="">None</option>${qualityOptions}</select></div>
                 <div class="form-group"><label>Drawback</label><select name="drawback"><option value="">None</option>${drawbackOptions}</select></div>
                 <div class="form-group"><label>Other modifier</label><input type="number" name="modifier" value="0" step="1"></div>
@@ -995,7 +1015,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                     }
                     // Trait context is evaluated below after the firing mode and skill are known.
                     const hitLocation = form.elements.location.value
-                    const location = hitLocation === 'head' ? -4 : ['arms', 'legs'].includes(hitLocation) ? -2 : 0
+                    const location = hitLocation === 'head' ? -4 : hitLocation === 'weapon' ? -3 : ['arms', 'legs'].includes(hitLocation) ? -2 : 0
                     const modifier = Number(form.elements.modifier.value) || 0
                     const coverChoice = isMelee ? 'none' : form.elements.cover.value
                     if (!['auto', 'none', 'partial', 'full'].includes(coverChoice)) { ui.notifications.warn('Choose valid target cover.'); return }
@@ -1006,6 +1026,10 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                         ui.notifications.warn('Target exactly one token before attacking.'); return
                     }
                     const target = targetedTokens[0].actor
+                    const targetWeapon = hitLocation === 'weapon' ? target.items.get(form.elements.targetWeapon.value) : null
+                    if (hitLocation === 'weapon' && (!targetWeapon || targetWeapon.type !== 'weapon' || !targetWeapon.system.equipped || droppedAt(targetWeapon))) {
+                        ui.notifications.warn('Select a currently equipped weapon on the targeted actor.'); return
+                    }
                     const detectedCover = coverChoice === 'auto' ? coverForAttack(this.actor, targetedTokens[0]) : null
                     if (detectedCover?.note) { ui.notifications.warn(`${detectedCover.note} Select cover manually for this shot.`); return }
                     const cover = detectedCover?.level ?? coverChoice
@@ -1024,6 +1048,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                     if (feed === "direct" && !looseProjectile) { ui.notifications.warn("No compatible arrows in loose ammunition."); return }
                     if (feed === "single" && category === "crossbow" && Number(weapon.system.capacity?.max) > 1) { ui.notifications.warn("Crossbow capacity must be 1. Set it on the weapon sheet."); return }
                     const selectedMode = category === 'firearm' ? form.elements.fireMode?.value : 'semi'
+                    if (hitLocation === 'weapon' && selectedMode !== 'semi') { ui.notifications.warn('Weapon called shots require single fire.'); return }
                     if (category === 'firearm' && !allowedFireModes(weapon).includes(selectedMode)) { ui.notifications.warn('That firing mode is unavailable for this weapon.'); return }
                     const firing = fireMode(selectedMode, weapon)
                     const automatic = traitRollEffects(this.actor, { kind: 'attack', weaponName: weapon.name, attribute: attributeKey,
@@ -1063,22 +1088,24 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                     const coverRoll = cover === 'none' ? null : await new Roll(cover === 'partial' ? '1d4' : '1d8').evaluate()
                     const coverPenalty = -(coverRoll?.total ?? 0)
                     const ammoHitBonus = isMelee ? 1 : hitBonus(firedDamageType)
-                    const total = roll.total + attribute + skillLevel + location + modifier + automatic.total + qualityBonus + drawbackBonus + ammoHitBonus + range.penalty + action.penalty + firing.penalty + attachments.attack + (meleeStrike?.strainPenalty ?? gunShot?.recoilPenalty ?? 0) + coverPenalty
+                    const armPenalty = hasArmInjury(this.actor) ? -2 : 0
+                    const total = roll.total + attribute + skillLevel + location + modifier + automatic.total + qualityBonus + drawbackBonus + ammoHitBonus + range.penalty + action.penalty + firing.penalty + attachments.attack + (meleeStrike?.strainPenalty ?? gunShot?.recoilPenalty ?? 0) + coverPenalty + armPenalty
                     const success = !criticalMiss && (criticalHit || total >= 9)
                     const effectiveTotal = criticalHit ? Math.max(9, total) : total
                     const degrees = success ? Math.floor((effectiveTotal - 9) / 2) + 1 : 0
-                    const hits = success ? volleyHits(firing.mode, effectiveTotal, firing.rounds) : 0
+                    const hits = success ? hitLocation === 'weapon' ? 1 : volleyHits(firing.mode, effectiveTotal, firing.rounds) : 0
                     const locationName = form.elements.location.selectedOptions[0].textContent
                     const ammoNote = feed === 'direct' ? `<p>1 ${escape(looseProjectile.name)} used; ${looseProjectile.system.qty} remain.</p>` : hasMagazine ? `<p>${firing.rounds} ${escape(firedDamageType)} round(s) fired; ${weapon.system.capacity.value}/${weapon.system.capacity.max} remaining.</p>` : ''
                     const rangeDetail = isMelee ? `melee swing ${meleeStrike.swing}/${meleePreview(this.actor, weapon).limit}; strain ${meleeStrike.strainPenalty}; Endurance spent ${meleeStrike.enduranceSpent}` : `shot ${gunShot.shot} this turn (${gunShot.shotsInAction}/${gunShot.rateOfFire} this action), recoil ${gunShot.recoilPenalty}; ` + (range.note ? 'range unconfigured (0)' : `range ${range.penalty} (${range.distance.toFixed(1)} m / ${range.normalRange} m)` )
                     const coverDetail = coverRoll ? `${cover} cover${detectedCover?.region ? ` (Region ${escape(detectedCover.region.name ?? detectedCover.region.id)})` : ''} −1d${cover === 'partial' ? 4 : 8} (${coverPenalty})` : coverChoice === 'auto' ? 'auto cover: none' : 'cover: none'
-                    const criticalNote = criticalHit ? 'Natural 10: guaranteed hit; penetrating damage doubled.' : criticalMiss ? 'Natural 1: automatic miss.' : ''
-                    const content = `<h2>${escape(weapon.name)}</h2><div class="afmbe-roll-kind">Attack</div><p>${escape(attributeKey)} ${attribute}, ${escape(skill?.name ?? 'No skill')} ${skillLevel}, ${escape(locationName)}, modifier ${modifier}, traits ${traitSummary(automatic, quality, drawback, escape)}, ${isMelee ? 'melee' : 'ammo'} ${ammoHitBonus >= 0 ? "+" : ""}${ammoHitBonus}, attachments ${attachments.attack >= 0 ? '+' : ''}${attachments.attack}${attachments.items.length ? ` (${attachments.items.map(item => escape(item.name)).join(', ')})` : ''}, ${rangeDetail}, mode ${firing.mode} ${firing.penalty}, action ${action.penalty}, ${coverDetail}</p><p>Roll ${roll.total} + modifiers = <strong>${total}</strong> vs 9 — <strong>${success ? `Hit (${degrees} degree${degrees === 1 ? '' : 's'}; ${hits} of ${firing.rounds} rounds hit)` : 'Miss'}</strong>${criticalNote ? ` — ${criticalNote}` : ''}</p>${ammoNote}`
+                    const criticalNote = criticalHit ? hitLocation === 'weapon' ? 'Natural 10: guaranteed weapon hit.' : 'Natural 10: guaranteed hit; penetrating damage doubled.' : criticalMiss ? 'Natural 1: automatic miss.' : ''
+                    const content = `<h2>${escape(weapon.name)}</h2><div class="afmbe-roll-kind">Attack</div><p>${escape(attributeKey)} ${attribute}, ${escape(skill?.name ?? 'No skill')} ${skillLevel}, ${escape(locationName)}, modifier ${modifier}, traits ${traitSummary(automatic, quality, drawback, escape)}, ${isMelee ? 'melee' : 'ammo'} ${ammoHitBonus >= 0 ? "+" : ""}${ammoHitBonus}, attachments ${attachments.attack >= 0 ? '+' : ''}${attachments.attack}${attachments.items.length ? ` (${attachments.items.map(item => escape(item.name)).join(', ')})` : ''}, ${rangeDetail}, mode ${firing.mode} ${firing.penalty}, action ${action.penalty}, arm injury ${armPenalty}, ${coverDetail}</p><p>Roll ${roll.total} + modifiers = <strong>${total}</strong> vs 9 — <strong>${success ? hitLocation === 'weapon' ? `Weapon hit: ${escape(targetWeapon.name)} (disarm; no HP damage)` : `Hit (${degrees} degree${degrees === 1 ? '' : 's'}; ${hits} of ${firing.rounds} rounds hit)` : 'Miss'}</strong>${criticalNote ? ` — ${criticalNote}` : ''}</p>${ammoNote}`
                     await ChatMessage.create({ user: game.user.id, speaker: ChatMessage.getSpeaker({ actor: this.actor }),
                         content: content + `<p>${success ? `Awaiting ${escape(target.name)}’s defense.` : 'Attack misses; no damage roll.'}</p>`, rolls: coverRoll ? [roll, coverRoll] : [roll],
                         flags: { 'afmbe-left-behind': { pendingAttack: {
                             attackerUuid: this.actor.uuid, targetUuid: target.uuid, targetName: target.name,
                             weaponUuid: weapon.uuid, weaponName: weapon.name, damageType: firedDamageType, total, location: hitLocation,
+                            targetTokenUuid: targetedTokens[0].document.uuid, targetWeaponUuid: targetWeapon?.uuid ?? null,
                             melee: isMelee, roundsFired: firing.rounds, hits, firingMode: firing.mode, criticalHit, status: success ? 'pending' : 'miss', blocked: false
                         } } } })
                     if (feed === 'direct' && Number(looseProjectile.system.qty) === 0)
@@ -1216,6 +1243,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
     async _setInventoryEquipped(item, equipped) {
         if (!item?.isOwner || !['weapon', 'armor', 'item', 'backpack', 'rig'].includes(item.type))
             throw new Error('This item cannot be equipped.')
+        if (equipped && droppedAt(item)) throw new Error('Pick up this dropped weapon before equipping it.')
         if (Boolean(item.system.equipped) === equipped && (!equipped || !storageLocation(item))) return
         if (equipped && item.type === 'weapon' && this.actor.items.filter(entry => entry.type === 'weapon' && entry.system.equipped && entry.id !== item.id).length >= 2)
             throw new Error('Only two weapons can be equipped. Unequip one first.')
