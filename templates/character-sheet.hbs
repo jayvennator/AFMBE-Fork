@@ -40,17 +40,17 @@
             <div class="tab equipment" data-group="primary" data-tab="equipment">
                 {{> "systems/afmbe-left-behind/templates/components/equipment-header.hbs"}}
                 <nav class="afmbe-inventory-tabs">
-                    <button type="button" class="inventory-view-button active" data-view="ready">Ready gear</button>
-                    <button type="button" class="inventory-view-button" data-view="storage">Backpacks & rigs</button>
-                    <button type="button" class="inventory-view-button" data-view="all">All items</button>
+                    <button type="button" class="inventory-view-button {{#if inventoryReady}}active{{/if}}" data-view="ready">Ready gear</button>
+                    <button type="button" class="inventory-view-button {{#if inventoryStorage}}active{{/if}}" data-view="storage">Backpacks & rigs</button>
+                    <button type="button" class="inventory-view-button {{#if inventoryAll}}active{{/if}}" data-view="all">All items</button>
                 </nav>
-                <div class="inventory-view" data-view="ready">
+                <div class="inventory-view" data-view="ready" {{#unless inventoryReady}}style="display:none"{{/unless}}>
                 {{> "systems/afmbe-left-behind/templates/components/ready-gear.hbs"}}
                 </div>
-                <div class="inventory-view" data-view="storage" style="display:none">
+                <div class="inventory-view" data-view="storage" {{#unless inventoryStorage}}style="display:none"{{/unless}}>
                 {{> "systems/afmbe-left-behind/templates/components/inventory-grids.hbs"}}
                 </div>
-                <div class="inventory-view" data-view="all" style="display:none">
+                <div class="inventory-view" data-view="all" {{#unless inventoryAll}}style="display:none"{{/unless}}>
                 {{> "systems/afmbe-left-behind/templates/components/weapons.hbs"}}
                 {{> "systems/afmbe-left-behind/templates/components/armor.hbs"}}
                 {{> "systems/afmbe-left-behind/templates/components/consumables.hbs"}}

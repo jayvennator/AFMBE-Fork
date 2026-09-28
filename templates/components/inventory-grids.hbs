@@ -21,7 +21,7 @@
     <div class="inventory-grid-cell" data-container-id="{{container.id}}" data-x="{{cell.x}}" data-y="{{cell.y}}"></div>
     {{/each}}
     {{#each container.contents as |stored|}}
-    <div class="item inventory-grid-item" data-item-id="{{stored.id}}" title="{{stored.name}} — drag to move" style="grid-column:{{stored.column}} / span {{stored.width}};grid-row:{{stored.row}} / span {{stored.height}}">{{stored.name}} <button type="button" class="inventory-unpack" title="Take out">×</button></div>
+    <div class="item inventory-grid-item" data-item-id="{{stored.id}}" title="{{stored.name}} ({{stored.width}}×{{stored.height}}) — drag to move" style="grid-column:{{stored.column}} / span {{stored.width}};grid-row:{{stored.row}} / span {{stored.height}}">{{stored.name}} <button type="button" class="inventory-unpack" title="Take out">×</button></div>
     {{/each}}
 </div></div>
 {{/each}}

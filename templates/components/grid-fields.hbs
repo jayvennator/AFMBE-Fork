@@ -1,3 +1,3 @@
-<tr><th>Inventory width × height</th><td><input type="number" min="1" max="8" step="1" name="system.gridSize.width" value="{{item.system.gridSize.width}}"> ×
+<tr><th>Inventory width × height</th><td><select class="grid-size-preset" aria-label="Footprint preset"><option value="">Select a size…</option><option value="1x1">Injector / small item (1×1)</option><option value="1x2">Magazine (1×2)</option><option value="2x2">Pistol (2×2)</option><option value="1x3">Long tool (1×3)</option><option value="1x5">Rifle (1×5)</option></select><input type="number" min="1" max="8" step="1" name="system.gridSize.width" value="{{item.system.gridSize.width}}"> ×
 <input type="number" min="1" max="8" step="1" name="system.gridSize.height" value="{{item.system.gridSize.height}}"></td></tr>
 <tr><th>Maximum units per grid stack</th><td><input type="number" min="1" step="1" name="system.stackLimit" value="{{item.system.stackLimit}}"></td></tr>

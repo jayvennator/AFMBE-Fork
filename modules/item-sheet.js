@@ -59,6 +59,15 @@ export class afmbeItemSheet extends foundry.appv1.sheets.ItemSheet {
     /** @override */
     activateListeners(html) {
         super.activateListeners(html);
+        html.find('.grid-size-preset').change(event => {
+            const size = event.currentTarget.value.split('x').map(Number);
+            if (size.length !== 2 || !size.every(Number.isSafeInteger)) return;
+            const width = html.find('[name="system.gridSize.width"]')[0];
+            const height = html.find('[name="system.gridSize.height"]')[0];
+            width.value = size[0]; height.value = size[1];
+            width.dispatchEvent(new Event('change', { bubbles: true }));
+            height.dispatchEvent(new Event('change', { bubbles: true }));
+        });
         html.find('[name="system.weaponCategory"], [name="system.feedSystem"]').change(() => {
             // Foundry saves the selection normally; preview the relevant rows immediately.
             const category = html.find('[name="system.weaponCategory"]').val();

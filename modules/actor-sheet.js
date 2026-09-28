@@ -39,6 +39,10 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
 
     getData() {
         const data = super.getData();
+        const inventoryView = this._inventoryView ?? 'ready';
+        data.inventoryReady = inventoryView === 'ready';
+        data.inventoryStorage = inventoryView === 'storage';
+        data.inventoryAll = inventoryView === 'all';
         data.isGM = game.user.isGM;
         data.editable = data.options.editable;
         const actorData = data.system;
@@ -237,6 +241,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         })
         html.find('.inventory-view-button').click(event => {
             const view = event.currentTarget.dataset.view
+            this._inventoryView = view
             const sheet = event.currentTarget.closest('.equipment')
             sheet?.querySelectorAll('.inventory-view').forEach(part => { part.style.display = part.dataset.view === view ? '' : 'none' })
             sheet?.querySelectorAll('.inventory-view-button').forEach(button => button.classList.toggle('active', button.dataset.view === view))
