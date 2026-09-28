@@ -7,6 +7,7 @@
         {{#if actor.selectedInventoryItem.canEquip}}{{#unless actor.selectedInventoryItem.inStash}}<button type="button" class="inventory-equip" title="{{#if actor.selectedInventoryItem.equipCost}}Costs one Help action in combat{{/if}}">{{#if actor.selectedInventoryItem.system.equipped}}Unequip{{else}}Equip{{/if}}{{#if actor.selectedInventoryItem.equipCost}} (1 Help){{/if}}</button>{{/unless}}{{/if}}
         {{#if actor.selectedInventoryItem.canUse}}<button type="button" class="use-consumable">Use</button>{{/if}}
         {{#if (eq actor.selectedInventoryItem.type 'magazine')}}<button type="button" class="load-magazine">Load ammunition</button>{{/if}}
+        {{#if (eq actor.selectedInventoryItem.type 'magazine')}}{{#if actor.selectedInventoryItem.system.rounds}}<button type="button" class="unload-magazine">Unload ammunition</button>{{/if}}{{/if}}
         {{#if actor.selectedInventoryItem.canRotate}}<button type="button" class="inventory-rotate" title="Turn this item 90 degrees">Rotate ↻</button>{{/if}}
         {{#if actor.selectedInventoryItem.canDetach}}<button type="button" class="inventory-detach">Detach from weapon</button>{{/if}}
         {{#if actor.selectedInventoryItem.stored}}{{#unless actor.selectedInventoryItem.stashLocked}}<button type="button" class="inventory-unpack">{{#if actor.selectedInventoryItem.inStash}}Take from stash{{else}}Take out{{#if actor.selectedInventoryItem.retrievalCost}} (1 Help){{/if}}{{/if}}</button>{{/unless}}{{/if}}

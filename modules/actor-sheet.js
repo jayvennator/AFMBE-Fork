@@ -15,7 +15,7 @@ import { armorIntegrity } from './armor-integrity.js';
 import { attachmentModifiers, promptInstallAttachment, removeAttachment } from './attachments.js';
 import { SKILL_CATEGORIES, skillCategory } from './skill-categories.js';
 import { containers, dimensions, firstFreeCell, nearestFreeCell, moveInventoryItem, unpackItem, splitInventoryStack, stashItem, storageLocation, inCombat, handCount, HAND_LIMIT, STASH, inventoryActionCost, itemWeight } from './inventory-grid.js';
-import { loadedMagazine, compatibleMagazines, reloadWeapon, loadMagazine } from './magazines.js';
+import { loadedMagazine, compatibleMagazines, reloadWeapon, loadMagazine, unloadMagazine } from './magazines.js';
 
 export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
 
@@ -260,6 +260,10 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             try { await removeMagazine(this.actor, weapon); } catch (error) { ui.notifications.warn(error.message); }
         })
         html.find('.load-magazine').click(this._onLoadMagazine.bind(this))
+        html.find('.unload-magazine').click(event => {
+            const magazine = this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)
+            this._promptMagazineUnload(magazine)
+        })
         if (game.user.isGM) html.find('.damage-roll').click(this._onDamageRoll.bind(this))
         html.find('.toggleEquipped').click(this._onToggleEquipped.bind(this))
         html.find('.toggle-weapon-equipped').click(async event => {
@@ -815,6 +819,21 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             } } }, default: 'load' }).render(true);
     }
 
+    _promptMagazineUnload(magazine) {
+        if (!magazine || !this.actor.isOwner) return
+        if (inCombat(this.actor)) return ui.notifications.warn('Unload magazine rounds outside combat.')
+        const rounds = Number(magazine.system.rounds)
+        if (!Number.isSafeInteger(rounds) || rounds < 1) return ui.notifications.warn('This magazine is empty.')
+        const amount = Math.min(rounds, 30)
+        new Dialog({ title: `Unload: ${magazine.name}`,
+            content: `<form><p>${rounds} round(s) in this magazine. Unload up to 30 per stack.</p><label>Rounds to unload</label><input type="number" name="amount" min="1" max="${amount}" step="1" value="${amount}"></form>`,
+            buttons: { cancel: { label: 'Cancel' }, unload: { label: 'Unload rounds', callback: async html => {
+                const chosen = Number(html[0].querySelector('[name="amount"]').value)
+                try { await unloadMagazine(this.actor, magazine, chosen) }
+                catch (error) { ui.notifications.warn(error.message) }
+            } } }, default: 'unload' }).render(true)
+    }
+
     async _onAttackRoll(event) {
         event.preventDefault()
         const weaponId = event.currentTarget.closest('.item')?.dataset.itemId
@@ -1250,6 +1269,8 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             add(item.system.equipped ? 'Unequip' : 'Equip', () => this._setInventoryEquipped(item, !item.system.equipped))
         if (item.type === 'consumable') add('Use', () => useConsumable(item))
         if (item.type === 'magazine') add('Load ammunition', () => this._promptMagazineLoad(item))
+        if (item.type === 'magazine' && Number(item.system.rounds) > 0)
+            add('Unload ammunition', () => this._promptMagazineUnload(item))
         if (item.type === 'weapon' && item.system.loadedMagazineId && item.system.equipped)
             add('Remove magazine (1 Help)', () => removeMagazine(this.actor, item))
         if (item.type === 'attachment' && item.system.installedWeaponId)
