@@ -17,10 +17,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Foundry package
         run: |
-          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.46.zip" . -x '.git/*' '.github/*'
+          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.47.zip" . -x '.git/*' '.github/*'
           cp system.json "$RUNNER_TEMP/system.json"
-          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.46.zip" system.json | python3 -m json.tool >/dev/null
-          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.46.zip"
+          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.47.zip" system.json | python3 -m json.tool >/dev/null
+          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.47.zip"
           python3 - <<'PY'
           import json
           manifest = json.load(open('system.json'))
@@ -33,10 +33,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.2.1-test.46 \
-            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.46.zip" \
+          gh release create v1.2.1-test.47 \
+            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.47.zip" \
             "$RUNNER_TEMP/system.json" \
             --target "$GITHUB_SHA" \
-            --title "AFMBE: Left Behind V13 ammunition test 45" \
-            --notes "Foundry V13 build 351 test. Right-click a magazine or drag loose ammunition onto it to choose how many compatible rounds to load outside combat. Fully consumed loose-round stacks disappear after loading or firing. Existing zero-round stacks can be deleted through the inventory context menu." \
+            --title "AFMBE: Left Behind V13 cover test 47" \
+            --notes "Foundry V13 build 351 test. Ranged attacks can select none, partial (−1d4), or full (−1d8) target cover. The penalty is rolled per attack and appears in the chat result." \
             --prerelease
