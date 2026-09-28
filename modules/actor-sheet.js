@@ -1209,6 +1209,8 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         if (['weapon', 'armor', 'item', 'backpack', 'rig'].includes(item.type))
             add(item.system.equipped ? 'Unequip' : 'Equip', () => this._setInventoryEquipped(item, !item.system.equipped))
         if (item.type === 'consumable') add('Use', () => useConsumable(item))
+        if (item.type === 'weapon' && item.system.loadedMagazineId && item.system.equipped)
+            add('Remove magazine (1 Help)', () => removeMagazine(this.actor, item))
         if (item.type === 'attachment' && item.system.installedWeaponId)
             add('Detach from weapon', () => removeAttachment(this.actor, item))
         if (dimensions(item).width !== dimensions(item).height)

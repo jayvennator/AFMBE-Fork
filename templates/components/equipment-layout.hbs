@@ -8,6 +8,8 @@
             <div class="item afmbe-equipped-item" data-item-id="{{weapon._id}}"><img class="afmbe-item-portrait" src="{{weapon.img}}" alt="" draggable="false"><div class="afmbe-equipped-details"><span class="item-name">{{weapon.name}}</span>
                 <button type="button" class="attack-roll">Attack</button>
                 {{#unless weapon.isMeleeWeapon}}{{#unless weapon.isBow}}<button type="button" class="reload-weapon">Reload</button>{{/unless}}{{/unless}}
+                {{#if weapon.hasInsertedMagazine}}<button type="button" class="remove-magazine" title="Remove the inserted magazine; its remaining rounds stay inside">Remove mag</button>{{/if}}
+                {{#if weapon.canUnload}}<button type="button" class="unload-weapon" title="Return rounds from an internal, cylinder, or single-shot weapon to loose ammunition">Unload rounds</button>{{/if}}
                 <button type="button" class="inventory-equip">Unequip</button></div></div>
             {{else}}<span>Drag a weapon here, or use Equip on an item.</span>{{/if}}
         </div>

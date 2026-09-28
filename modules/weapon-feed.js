@@ -1,7 +1,7 @@
 import { normalizeCaliber } from './calibers.js';
 import { damageType } from './damage-types.js';
 import { spendAction } from './action-economy.js';
-import { quickAccess } from './inventory-grid.js';
+import { quickAccess, firstFreeCell, handCount, HAND_LIMIT } from './inventory-grid.js';
 
 export function weaponCategory(weapon) {
     const category = weapon.system.weaponCategory;
@@ -67,9 +67,15 @@ export async function removeMagazine(actor, weapon) {
     if (!weapon.system.equipped || weapon.system.storage?.containerId) throw new Error('Equip the weapon before removing its magazine.');
     const magazine = actor.items.get(weapon.system.loadedMagazineId);
     if (!magazine || magazine.type !== 'magazine' || magazine.system.insertedInWeaponId !== weapon.id) throw new Error('Inserted magazine is missing.');
-    await magazine.update({ 'system.insertedInWeaponId': '' });
-    await weapon.update({ 'system.loadedMagazineId': '', 'system.usesMagazines': true, 'system.capacity.value': 0 });
+    const placeable = { id: magazine.id, name: magazine.name, type: magazine.type, parent: magazine.parent,
+        system: { ...magazine.system, insertedInWeaponId: '' } };
+    const available = ['pockets', ...actor.items.filter(entry => entry.type === 'rig' && entry.system.equipped).map(entry => entry.id)];
+    const destination = available.map(id => ({ id, cell: firstFreeCell(actor, placeable, id) })).find(entry => entry.cell);
+    if (!destination && handCount(actor) >= HAND_LIMIT) throw new Error('Free space in pockets, your worn rig, or your hands before removing this magazine.');
     const action = await spendAction(actor, 'help');
-    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<h2>${foundry.utils.escapeHTML(actor.name)} removes ${foundry.utils.escapeHTML(magazine.name)}</h2><p>${magazine.system.rounds} rounds remain in the magazine.${action.tracked ? ` Help action ${action.used}.` : ''}</p>` });
+    await magazine.update({ 'system.insertedInWeaponId': '', 'system.storage.containerId': destination?.id ?? '',
+        'system.storage.x': destination?.cell.x ?? 0, 'system.storage.y': destination?.cell.y ?? 0 });
+    await weapon.update({ 'system.loadedMagazineId': '', 'system.usesMagazines': true, 'system.capacity.value': 0 });
+    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<h2>${foundry.utils.escapeHTML(actor.name)} removes ${foundry.utils.escapeHTML(magazine.name)}</h2><p>${magazine.system.rounds} rounds remain in the magazine. Placed in ${destination?.id === 'pockets' ? 'pockets' : destination ? 'the combat rig' : 'hands'}.${action.tracked ? ` Help action ${action.used}.` : ''}</p>` });
     return true;
 }
