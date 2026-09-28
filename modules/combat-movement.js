@@ -4,8 +4,10 @@ import { traitRollEffects } from './trait-effects.js';
 
 const SYSTEM = 'afmbe-left-behind';
 const pending = new Map();
+const rollingDash = new Set();
 const meters = n => Math.max(0, Number(n) || 0);
 const round = n => Math.round(n * 100) / 100;
+const dashSuccesses = dash => Math.max(0, Number(dash?.successes) || (dash?.success ? 1 : 0));
 
 function context(token) {
     const combat = game.combat;
@@ -29,8 +31,10 @@ export function movementPanel(actor) {
     const stored = token.getFlag(SYSTEM, 'combatMovement') ?? {};
     const traveled = stored.key === ctx.key ? meters(stored.distance) : 0;
     const dash = actor.getFlag(SYSTEM, 'dash') ?? {};
-    return { allowance, traveled: round(traveled), remaining: round(Math.max(0, allowance * (dash.key === ctx.key && dash.success ? 2 : 1) - traveled)),
-        dashAttempted: dash.key === ctx.key, active: ctx.active };
+    const successes = dash.key === ctx.key ? dashSuccesses(dash) : 0;
+    return { allowance, traveled: round(traveled), remaining: round(Math.max(0, allowance * (1 + successes) - traveled)),
+        dashSuccesses: successes, nextDashPenalty: -2 * (dash.key === ctx.key ? Number(dash.attempts) || 0 : 0),
+        dashFailed: dash.key === ctx.key && Boolean(dash.failed), active: ctx.active };
 }
 
 export async function attemptDash(actor) {
@@ -38,18 +42,27 @@ export async function attemptDash(actor) {
     const token = canvas?.tokens?.controlled?.find(entry => entry.actor?.uuid === actor.uuid)?.document;
     const ctx = context(token);
     if (!ctx?.active) throw new Error('Select your token on its combat turn to dash.');
-    if (actor.getFlag(SYSTEM, 'dash')?.key === ctx.key) throw new Error('Dash can only be attempted once per turn.');
+    if (rollingDash.has(actor.uuid)) throw new Error('Dash roll already in progress.');
+    const previous = actor.getFlag(SYSTEM, 'dash') ?? {};
+    const dash = previous.key === ctx.key ? previous : { key: ctx.key, attempts: 0, successes: 0, failed: false };
+    if (dash.failed) throw new Error('Dash attempts ended after the failed roll.');
     const used = actionState(actor)?.counts.movement ?? 0;
     if (!used) throw new Error('Use your free Movement action before attempting to dash.');
-    const roll = await new Roll('1d10').evaluate();
-    const constitution = Number(actor.system.primaryAttributes?.constitution?.value) || 0;
-    const traits = traitRollEffects(actor, { kind: 'attribute', attribute: 'constitution' });
-    const total = Number(roll.total) + constitution * 2 + attributeBonus(actor, 'constitution') + traits.total;
-    const success = total >= 9;
-    await actor.setFlag(SYSTEM, 'dash', { key: ctx.key, success });
-    if (success) await spendAction(actor, 'movement');
-    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), rolls: [roll],
-        content: `<p>${foundry.utils.escapeHTML(actor.name)} attempts to dash: ${roll.total} + Constitution ${constitution * 2} + effects ${attributeBonus(actor, 'constitution') + traits.total} = <strong>${total}</strong> vs 9. ${success ? 'Success: one extra movement allowance unlocked; Essence is spent as you travel.' : 'Failure: no extra movement.'}</p>` });
+    rollingDash.add(actor.uuid);
+    try {
+        const roll = await new Roll('1d10').evaluate();
+        const constitution = Number(actor.system.primaryAttributes?.constitution?.value) || 0;
+        const traits = traitRollEffects(actor, { kind: 'attribute', attribute: 'constitution' });
+        const penalty = -2 * (Number(dash.attempts) || 0);
+        const effects = attributeBonus(actor, 'constitution') + traits.total;
+        const total = Number(roll.total) + constitution * 2 + effects + penalty;
+        const success = total >= 9;
+        await spendAction(actor, 'movement');
+        await actor.setFlag(SYSTEM, 'dash', { key: ctx.key, attempts: (Number(dash.attempts) || 0) + 1,
+            successes: dashSuccesses(dash) + (success ? 1 : 0), failed: !success });
+        await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), rolls: [roll],
+            content: `<p>${foundry.utils.escapeHTML(actor.name)} attempts to dash: ${roll.total} + Constitution ${constitution * 2} + effects ${effects} ${penalty < 0 ? `− ${-penalty}` : '+ 0'} = <strong>${total}</strong> vs 9. ${success ? 'Success: another movement allowance unlocked; Essence is spent as you travel. You may try again at an additional −2.' : 'Failure: no extra allowance; no further Dash attempts this turn.'}</p>` });
+    } finally { rollingDash.delete(actor.uuid); }
 }
 
 export function registerCombatMovement() {
@@ -65,8 +78,9 @@ export function registerCombatMovement() {
         const traveled = stored.key === ctx.key ? meters(stored.distance) : 0;
         const allowance = Math.floor(meters(ctx.actor.system.secondaryAttributes?.speed?.halfValue));
         const dash = ctx.actor.getFlag(SYSTEM, 'dash') ?? {};
-        const dashActive = dash.key === ctx.key && dash.success;
-        const max = allowance * (dashActive ? 2 : 1);
+        const successes = dash.key === ctx.key ? dashSuccesses(dash) : 0;
+        const dashActive = successes > 0;
+        const max = allowance * (1 + successes);
         if (traveled + distance > max + 0.01) { ui.notifications.warn(`Movement limit: ${round(Math.max(0, max - traveled))} m remaining. ${dashActive ? '' : 'Dash to move farther.'}`); return false; }
         if ((actionState(ctx.actor)?.counts.movement ?? 0) > 0 && traveled === 0 && !dashActive) {
             ui.notifications.warn('Movement action already spent. Dash to move farther.'); return false;
