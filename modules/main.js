@@ -11,6 +11,7 @@ import { registerTemplates } from "./register-templates.js";
 import { registerHandlebarsHelpers } from "./handlebars.js";
 import { applyArmorDamage } from "./armor-damage.js";
 import { registerRegionCoverControls } from './region-cover.js';
+import { renderSuppressiveFire, handleSuppressionResponse } from './suppressive-fire.js';
 
 registerRegionCoverControls();
 
@@ -92,11 +93,13 @@ Hooks.on('createChatMessage', (message) => {
     if (!game.user.isGM || game.users.activeGM?.id !== game.user.id) return;
     if (message.getFlag('afmbe-left-behind', 'armorDamage')) void applyArmorDamage(message);
     if (message.getFlag('afmbe-left-behind', 'defenseResponse')) void handleDefenseResponse(message);
+    if (message.getFlag('afmbe-left-behind', 'suppressionResponse')) void handleSuppressionResponse(message);
 });
 
 // Hook for Re-Rolls on Lucky/Unlucky Rolls
 Hooks.on("renderChatMessage", (app, html, data) => {
     void renderLinkedAttack(app, html[0]);
+    renderSuppressiveFire(app, html[0]);
     const armorDamage = app.getFlag('afmbe-left-behind', 'armorDamage');
     if (armorDamage && game.user.isGM && !armorDamage.applied) {
         const button = document.createElement('button');
@@ -216,5 +219,6 @@ Hooks.once('ready', async () => {
     if (!game.user.isGM || game.users.activeGM?.id !== game.user.id) return;
     for (const message of game.messages) {
         if (message.getFlag('afmbe-left-behind', 'defenseResponse')) await handleDefenseResponse(message);
+        if (message.getFlag('afmbe-left-behind', 'suppressionResponse')) await handleSuppressionResponse(message);
     }
 });

@@ -17,6 +17,7 @@ import { SKILL_CATEGORIES, skillCategory } from './skill-categories.js';
 import { containers, dimensions, firstFreeCell, nearestFreeCell, moveInventoryItem, unpackItem, splitInventoryStack, stashItem, storageLocation, inCombat, handCount, HAND_LIMIT, STASH, inventoryActionCost, itemWeight } from './inventory-grid.js';
 import { loadedMagazine, compatibleMagazines, reloadWeapon, loadMagazine, unloadMagazine } from './magazines.js';
 import { coverForAttack, toggleCoverStance } from './region-cover.js';
+import { beginSuppressiveCone } from './suppressive-fire.js';
 
 export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
 
@@ -881,7 +882,8 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         const gunState = !isMelee ? gunPreview(this.actor, weapon) : null
         const modes = allowedFireModes(weapon)
         const defaultMode = modes.includes(saved.fireMode) ? saved.fireMode : modes[0]
-        const modeOptions = modes.map(mode => `<option value="${mode}" ${mode === defaultMode ? 'selected' : ''}>${mode === 'semi' ? 'Semi-auto (1 round)' : mode === 'burst' ? `Burst (${fireMode(mode, weapon).rounds} rounds; −3)` : 'Automatic (10 rounds; −4)'}</option>`).join('')
+        const modeOptions = modes.map(mode => `<option value="${mode}" ${mode === defaultMode ? 'selected' : ''}>${mode === 'semi' ? 'Semi-auto (1 round)' : mode === 'burst' ? `Burst (${fireMode(mode, weapon).rounds} rounds; −3)` : 'Automatic (10 rounds; −4)'}</option>`).join('') +
+            (category === 'firearm' && modes.includes('automatic') ? '<option value="suppress">Suppressive fire (10 rounds; cone)</option>' : '')
         const offensivePreview = actionState(this.actor)
         const rangePreview = isMelee ? { penalty: 0, note: "Melee range: target must be adjacent." } : measureWeaponRange(this.actor, weapon)
         const attachmentPreview = attachmentModifiers(this.actor, weapon)
@@ -948,7 +950,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                     const other = Number(form.elements.modifier.value) || 0
                     const parts = [`Target ${location}`, `traits ${auto.total + manual >= 0 ? '+' : ''}${auto.total + manual}`,
                         `attachments ${attachments.attack >= 0 ? '+' : ''}${attachments.attack}`]
-                    if (category === 'firearm') parts.push(`mode ${fireMode(mode, weapon).penalty}`)
+                    if (category === 'firearm') parts.push(mode === 'suppress' ? 'suppressive cone (10 rounds)' : `mode ${fireMode(mode, weapon).penalty}`)
                     if (!isMelee) {
                         const choice = form.elements.cover.value
                         const detected = choice === 'auto' && game.user.targets.size === 1 ? coverForAttack(this.actor, [...game.user.targets][0]) : null
@@ -972,6 +974,11 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                     const quality = this.actor.items.get(form.elements.quality.value)
                     const drawback = this.actor.items.get(form.elements.drawback.value)
                     if ((quality && quality.type !== 'quality') || (drawback && drawback.type !== 'drawback')) { ui.notifications.warn('Choose a valid Quality and Drawback.'); return }
+                    if (form.elements.fireMode?.value === 'suppress') {
+                        try { beginSuppressiveCone(this.actor, weapon, skill, attributeKey); }
+                        catch (error) { ui.notifications.warn(error.message); }
+                        return;
+                    }
                     // Trait context is evaluated below after the firing mode and skill are known.
                     const hitLocation = form.elements.location.value
                     const location = hitLocation === 'head' ? -4 : ['arms', 'legs'].includes(hitLocation) ? -2 : 0
