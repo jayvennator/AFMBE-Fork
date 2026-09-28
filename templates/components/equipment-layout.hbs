@@ -5,16 +5,16 @@
         <div class="afmbe-equip-slot" data-equip-slot="weapon">
             <strong>Weapon slot</strong>
             {{#if weapon}}
-            <div class="item" data-item-id="{{weapon._id}}"><span class="item-name">{{weapon.name}}</span>
+            <div class="item afmbe-equipped-item" data-item-id="{{weapon._id}}"><img class="afmbe-item-portrait" src="{{weapon.img}}" alt="" draggable="false"><div class="afmbe-equipped-details"><span class="item-name">{{weapon.name}}</span>
                 <button type="button" class="attack-roll">Attack</button>
                 {{#unless weapon.isMeleeWeapon}}{{#unless weapon.isBow}}<button type="button" class="reload-weapon">Reload</button>{{/unless}}{{/unless}}
-                <button type="button" class="inventory-equip">Unequip</button></div>
+                <button type="button" class="inventory-equip">Unequip</button></div></div>
             {{else}}<span>Drag a weapon here, or use Equip on an item.</span>{{/if}}
         </div>
         {{/each}}
         <div class="afmbe-equip-slot" data-equip-slot="armor"><strong>Worn armor</strong>
-            {{#each actor.readyArmor as |armor|}}<div class="item" data-item-id="{{armor._id}}"><span class="item-name">{{armor.name}}</span>
-            <button type="button" class="replenish-armor">Repair</button><button type="button" class="inventory-equip">Unequip</button></div>{{/each}}
+            {{#each actor.readyArmor as |armor|}}<div class="item afmbe-equipped-item" data-item-id="{{armor._id}}"><img class="afmbe-item-portrait" src="{{armor.img}}" alt="" draggable="false"><div class="afmbe-equipped-details"><span class="item-name">{{armor.name}}</span>
+            <button type="button" class="replenish-armor">Repair</button><button type="button" class="inventory-equip">Unequip</button></div></div>{{/each}}
             <span>Drag armor here to wear it.</span>
         </div>
     </section>

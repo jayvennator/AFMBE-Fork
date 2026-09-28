@@ -176,7 +176,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             })),
             contents: allStored.filter(entry => storageLocation(entry) === container.id).map(entry => {
                 const size = dimensions(entry)
-                return { id: entry._id ?? entry.id, name: entry.name, type: entry.type,
+                return { id: entry._id ?? entry.id, name: entry.name, img: entry.img, type: entry.type,
                     canEquip: ['weapon', 'armor', 'item'].includes(entry.type), canUse: entry.type === 'consumable',
                     equipped: Boolean(entry.system.equipped), qty: Number(entry.system.qty ?? 1),
                     x: Number(entry.system.storage?.x) || 0,
@@ -201,6 +201,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             canDetach: selected.type === 'attachment' && Boolean(selected.system.installedWeaponId),
             canRotate: dimensions(selected).width !== dimensions(selected).height,
             footprint: dimensions(selected), inStash: storageLocation(selected) === STASH,
+            stashLocked: storageLocation(selected) === STASH && inCombat(this.actor),
             canStash: !inCombat(this.actor) && !selected.system.equipped && !selected.system.installedWeaponId &&
                 !selected.system.insertedInWeaponId && !['backpack','rig','quality','drawback','skill','power','aspect'].includes(selected.type) && storageLocation(selected) !== STASH,
             equipCost: inCombat(this.actor) && ['weapon','backpack','rig'].includes(selected.type) ? 1 : 0,
@@ -299,6 +300,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             this._gridDrag = null
             html.find('.inventory-grid-preview').prop('hidden', true)
         })
+        html.find('.afmbe-item-portrait').on('error', event => { event.currentTarget.hidden = true })
         html.find('.inventory-grid-item, .afmbe-loose-item').click(async event => {
             if (event.target.closest('button')) return
             const scroll = html.closest('.window-content').scrollTop()
@@ -1168,6 +1170,17 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         const menu = document.createElement('div')
         menu.className = 'afmbe-inventory-menu'
         menu.setAttribute('role', 'menu')
+        const header = document.createElement('div')
+        header.className = 'afmbe-inventory-menu-header'
+        const portrait = document.createElement('img')
+        portrait.className = 'afmbe-item-portrait'
+        portrait.src = item.img || 'icons/svg/item-bag.svg'
+        portrait.alt = ''
+        portrait.addEventListener('error', () => { portrait.hidden = true })
+        const name = document.createElement('strong')
+        name.textContent = item.name
+        header.append(portrait, name)
+        menu.append(header)
         const actions = []
         const add = (label, run) => actions.push({ label, run })
         if (['weapon', 'armor', 'item', 'backpack', 'rig'].includes(item.type))
@@ -1177,10 +1190,12 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             add('Detach from weapon', () => removeAttachment(this.actor, item))
         if (dimensions(item).width !== dimensions(item).height)
             add('Rotate 90°', () => this._rotateInventoryItem(item))
-        if (storageLocation(item)) add(`${storageLocation(item) === STASH ? 'Take from stash' : 'Take out'}${inventoryActionCost(this.actor, item) ? ' (1 Help)' : ''}`, () => unpackItem(this.actor, item))
+        if (storageLocation(item) && !(storageLocation(item) === STASH && inCombat(this.actor)))
+            add(`${storageLocation(item) === STASH ? 'Take from stash' : 'Take out'}${inventoryActionCost(this.actor, item) ? ' (1 Help)' : ''}`, () => unpackItem(this.actor, item))
         if (storageLocation(item) !== STASH && !inCombat(this.actor) && !item.system.equipped && !item.system.insertedInWeaponId && !item.system.installedWeaponId)
             add('Move to off-character stash', () => stashItem(this.actor, item))
         for (const container of containers(this.actor)) {
+            if (storageLocation(item) === STASH && inCombat(this.actor)) continue
             if (container.type && !container.equipped) continue
             add(`Put in ${container.label}${inventoryActionCost(this.actor, item, container.id) ? ' (1 Help)' : ''}`, async () => {
                 const cell = firstFreeCell(this.actor, item, container.id)
