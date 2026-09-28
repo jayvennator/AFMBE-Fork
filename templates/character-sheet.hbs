@@ -40,15 +40,17 @@
             <div class="tab equipment" data-group="primary" data-tab="equipment">
                 {{> "systems/afmbe-left-behind/templates/components/equipment-header.hbs"}}
                 {{> "systems/afmbe-left-behind/templates/components/equipment-layout.hbs"}}
-                <details class="afmbe-inventory-catalog" {{#if catalogOpen}}open{{/if}}>
-                <summary>Item lists and editing</summary>
+            </div>
+
+            {{!-- Item list and editing tab --}}
+            <div class="tab items" data-group="primary" data-tab="items">
+                {{> "systems/afmbe-left-behind/templates/components/equipment-header.hbs"}}
                 {{> "systems/afmbe-left-behind/templates/components/weapons.hbs"}}
                 {{> "systems/afmbe-left-behind/templates/components/armor.hbs"}}
                 {{> "systems/afmbe-left-behind/templates/components/consumables.hbs"}}
                 {{> "systems/afmbe-left-behind/templates/components/ammunition.hbs"}}
                 {{> "systems/afmbe-left-behind/templates/components/attachments.hbs"}}
                 {{> "systems/afmbe-left-behind/templates/components/items.hbs"}}
-                </details>
             </div>
 
         </section>

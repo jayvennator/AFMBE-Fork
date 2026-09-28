@@ -42,10 +42,10 @@ export function canInstall(actor, weapon, attachment) {
             item.system.installedWeaponId === weapon.id && item.system.slot === attachment.system.slot).length);
 }
 
-export function promptInstallAttachment(actor, weapon) {
+export function promptInstallAttachment(actor, weapon, slot = null) {
     if (!actor?.isOwner || !weapon) return;
-    const available = actor.items.filter(item => canInstall(actor, weapon, item));
-    if (!available.length) return ui.notifications.warn('No compatible, uninstalled attachment fits a free slot on this weapon.');
+    const available = actor.items.filter(item => canInstall(actor, weapon, item) && (!slot || item.system.slot === slot));
+    if (!available.length) return ui.notifications.warn(`No compatible, accessible attachment fits ${slot ? `the ${slot} slot` : 'a free slot'} on this weapon.`);
     const attributes = actor.system.primaryAttributes ?? {};
     const attrs = Object.keys(attributes).map(key => `<option value="${safe(key)}" ${key === 'dexterity' ? 'selected' : ''}>${safe(key)}</option>`).join('');
     const skills = actor.items.filter(item => item.type === 'skill');
@@ -60,7 +60,7 @@ export function promptInstallAttachment(actor, weapon) {
         buttons: { cancel: { label: 'Cancel' }, install: { label: 'Roll Help task', callback: async html => {
             const form = html[0].querySelector('form');
             const attachment = actor.items.get(form.elements.attachment.value);
-            if (!canInstall(actor, weapon, attachment)) return ui.notifications.warn('Weapon slot or attachment changed; open the dialog again.');
+            if (!canInstall(actor, weapon, attachment) || (slot && attachment.system.slot !== slot)) return ui.notifications.warn('Weapon slot or attachment changed; open the dialog again.');
             const modifier = Number(form.elements.modifier.value);
             if (!Number.isFinite(modifier)) return ui.notifications.warn('Enter a valid modifier.');
             const key = form.elements.attribute.value;
@@ -75,9 +75,10 @@ export function promptInstallAttachment(actor, weapon) {
             const total = roll.total + attr + level + modifier + action.penalty + traits.total;
             let outcome = 'Failure: attachment remains uninstalled.';
             if (total >= 9) {
-                if (canInstall(actor, weapon, attachment)) {
+                if (canInstall(actor, weapon, attachment) && (!slot || attachment.system.slot === slot)) {
                     await attachment.update({ 'system.installedWeaponId': weapon.id,
                         'system.storage.containerId': '', 'system.storage.x': 0, 'system.storage.y': 0 });
+                    if (weapon.sheet.rendered) weapon.sheet.render(false);
                     outcome = `Success: ${safe(attachment.name)} installed on ${safe(weapon.name)}.`;
                 } else outcome = 'Slot changed during the roll; no attachment installed.';
             }

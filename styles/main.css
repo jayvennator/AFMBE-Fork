@@ -720,11 +720,15 @@
 .afmbe-left-behind .afmbe-loose-item { border: 1px solid #888; padding: 0.3rem; margin: 0.2rem 0; cursor: pointer; }
 .afmbe-left-behind .afmbe-loose-item:hover, .afmbe-left-behind .inventory-grid-item:hover { outline: 2px solid #82a7d5; }
 .afmbe-left-behind .afmbe-equip-slot button, .afmbe-left-behind .inventory-grid-item button { font-size: 0.75rem; width: auto; height: auto; padding: 0.12rem 0.25rem; }
-.afmbe-left-behind .afmbe-inventory-catalog { margin-top: 1rem; border-top: 1px solid #888; padding-top: 0.5rem; }
-.afmbe-left-behind .afmbe-inventory-catalog summary { cursor: pointer; font-weight: bold; }
 .afmbe-inventory-menu { position: fixed; z-index: 10000; display: flex; flex-direction: column; gap: 2px; min-width: 165px; max-height: 75vh; overflow-y: auto; background: #222b35; border: 1px solid #aab3bf; padding: 4px; box-shadow: 0 5px 15px #0009; }
 .afmbe-inventory-menu button { width: 100%; padding: 4px 8px; text-align: left; color: #eee; background: transparent; border: 0; cursor: pointer; }
 .afmbe-inventory-menu button:hover { background: #526577; }
+.afmbe-left-behind .weapon-attachment-section { padding: 0.4rem 0.75rem 0.75rem; }
+.afmbe-left-behind .weapon-attachment-slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 0.4rem; }
+.afmbe-left-behind .weapon-attachment-slot { border: 1px solid #888; min-height: 72px; padding: 0.3rem; }
+.afmbe-left-behind .weapon-attachment-slot strong { display: block; border-bottom: 1px solid #888; }
+.afmbe-left-behind .weapon-attachment-slot span { display: block; margin: 0.2rem 0; }
+.afmbe-left-behind .weapon-attachment-slot button { width: auto; height: auto; margin-right: 0.3rem; }
 @media (max-width: 850px) { .afmbe-left-behind .afmbe-loadout { grid-template-columns: 1fr; } }
 
 /* ------------------------------------------- 

@@ -39,7 +39,6 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
 
     getData() {
         const data = super.getData();
-        data.catalogOpen = Boolean(this._catalogOpen);
         data.isGM = game.user.isGM;
         data.editable = data.options.editable;
         const actorData = data.system;
@@ -346,13 +345,10 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
             try { await this._setInventoryEquipped(item, !item?.system.equipped) }
             catch (error) { ui.notifications.warn(error.message) }
         })
-        html.find('.equipment .item').on('contextmenu', event => {
+        html.find('.equipment .item, .items .item').on('contextmenu', event => {
             event.preventDefault()
             const item = this.actor.items.get(event.currentTarget.dataset.itemId)
             if (item) this._showInventoryMenu(item, event.originalEvent)
-        })
-        html.find('.afmbe-inventory-catalog').on('toggle', event => {
-            this._catalogOpen = event.currentTarget.open
         })
         html.find('.armor-button-cell button').click(this._onArmorRoll.bind(this))
         html.find('.replenish-armor').click(event => promptArmorReplenishment(this.actor, this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)))

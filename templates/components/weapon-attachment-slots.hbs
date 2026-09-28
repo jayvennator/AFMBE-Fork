@@ -1,0 +1,27 @@
+<section class="weapon-attachment-section">
+    <h2>Weapon attachment slots</h2>
+    {{#if hasActor}}
+    <p>Installed attachments travel with this weapon and occupy these slots. Installing uses a Help task. In combat, first retrieve an attachment from a backpack into pockets or a worn rig.</p>
+    <div class="weapon-attachment-slots">
+        {{#each weaponAttachmentSlots as |slot|}}
+        <div class="weapon-attachment-slot" data-slot="{{slot.id}}">
+            <strong>{{slot.label}}</strong>
+            {{#if slot.installed}}
+            <span>{{slot.installed.name}}</span>
+            <button type="button" class="weapon-slot-inspect" data-attachment-id="{{slot.installed.id}}">Details</button>
+            <button type="button" class="weapon-slot-remove" data-attachment-id="{{slot.installed.id}}">Remove</button>
+            {{else}}
+            {{#if slot.stored}}
+            <span>{{slot.stored.name}} is still in storage; remove its old weapon link before installing it.</span>
+            <button type="button" class="weapon-slot-remove" data-attachment-id="{{slot.stored.id}}">Clear link</button>
+            {{else}}
+            <span>Empty{{#if slot.available}} · {{slot.available}} ready to install{{/if}}</span>
+            <button type="button" class="weapon-slot-install">Install</button>
+            {{/if}}{{/if}}
+        </div>
+        {{/each}}
+    </div>
+    {{else}}
+    <p>Add this weapon to a character to manage its attachment slots.</p>
+    {{/if}}
+</section>

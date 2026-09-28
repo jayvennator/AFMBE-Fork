@@ -2,6 +2,8 @@ import { damageType } from './damage-types.js';
 import { CALIBERS, caliberSelection } from './calibers.js';
 import { weaponCategory, feedSystem } from './weapon-feed.js';
 import { SKILL_CATEGORIES, skillCategory } from './skill-categories.js';
+import { ATTACHMENT_SLOTS, canInstall, promptInstallAttachment, removeAttachment } from './attachments.js';
+import { storageLocation } from './inventory-grid.js';
 export class afmbeItemSheet extends foundry.appv1.sheets.ItemSheet {
 
     /** @override */
@@ -28,6 +30,18 @@ export class afmbeItemSheet extends foundry.appv1.sheets.ItemSheet {
         data.dtypes = ["String", "Number", "Boolean"];
         data.attributeOptions = Object.fromEntries(["strength", "dexterity", "constitution", "intelligence", "perception", "willpower"].map(key => [key, key[0].toUpperCase() + key.slice(1)]));
         data.hasActor = this.item.parent instanceof Actor;
+        if (this.item.type === 'weapon' && data.hasActor) {
+            const actor = this.item.parent;
+            const names = { optic: 'Optic', muzzle: 'Muzzle', underbarrel: 'Underbarrel', stock: 'Stock', accessory: 'Accessory' };
+            data.weaponAttachmentSlots = ATTACHMENT_SLOTS.map(slot => ({
+                id: slot, label: names[slot],
+                installed: actor.items.find(entry => entry.type === 'attachment' && entry.system.installedWeaponId === this.item.id &&
+                    entry.system.slot === slot && !storageLocation(entry)) ?? null,
+                stored: actor.items.find(entry => entry.type === 'attachment' && entry.system.installedWeaponId === this.item.id &&
+                    entry.system.slot === slot && storageLocation(entry)) ?? null,
+                available: actor.items.filter(entry => entry.system.slot === slot && canInstall(actor, this.item, entry)).length
+            }));
+        }
         data.normalizedDamageType = damageType(this.item.system.damage_type);
         data.caliberOptions = CALIBERS;
         data.attackModeOptions = { auto: 'Auto (legacy)', melee: 'Melee', ranged: 'Ranged' };
@@ -59,6 +73,23 @@ export class afmbeItemSheet extends foundry.appv1.sheets.ItemSheet {
     /** @override */
     activateListeners(html) {
         super.activateListeners(html);
+        html.find('.weapon-slot-install').click(event => {
+            event.preventDefault();
+            const slot = event.currentTarget.closest('[data-slot]')?.dataset.slot;
+            if (this.item.type === 'weapon' && this.item.parent?.isOwner && ATTACHMENT_SLOTS.includes(slot))
+                promptInstallAttachment(this.item.parent, this.item, slot);
+        });
+        html.find('.weapon-slot-remove').click(async event => {
+            event.preventDefault();
+            const attachment = this.item.parent?.items.get(event.currentTarget.dataset.attachmentId);
+            if (!attachment || attachment.system.installedWeaponId !== this.item.id) return;
+            try { await removeAttachment(this.item.parent, attachment); await this.render(false); }
+            catch (error) { ui.notifications.warn(error.message); }
+        });
+        html.find('.weapon-slot-inspect').click(event => {
+            event.preventDefault();
+            this.item.parent?.items.get(event.currentTarget.dataset.attachmentId)?.sheet.render(true);
+        });
         html.find('.grid-size-preset').change(event => {
             const size = event.currentTarget.value.split('x').map(Number);
             if (size.length !== 2 || !size.every(Number.isSafeInteger)) return;
