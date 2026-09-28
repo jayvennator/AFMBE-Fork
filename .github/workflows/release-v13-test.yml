@@ -17,10 +17,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Foundry package
         run: |
-          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.54.zip" . -x '.git/*' '.github/*'
+          zip -q -r "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.55.zip" . -x '.git/*' '.github/*'
           cp system.json "$RUNNER_TEMP/system.json"
-          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.54.zip" system.json | python3 -m json.tool >/dev/null
-          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.54.zip"
+          unzip -p "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.55.zip" system.json | python3 -m json.tool >/dev/null
+          unzip -tq "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.55.zip"
           python3 - <<'PY'
           import json
           manifest = json.load(open('system.json'))
@@ -33,10 +33,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.2.1-test.54 \
-            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.54.zip" \
+          gh release create v1.2.1-test.55 \
+            "$RUNNER_TEMP/afmbe-left-behind-v1.2.1-test.55.zip" \
             "$RUNNER_TEMP/system.json" \
             --target "$GITHUB_SHA" \
-            --title "AFMBE: Left Behind V13 headshot damage test 54" \
-            --notes "Foundry V13 build 351 test. Headshots apply twice the damage that penetrates armor for every ammunition type. Ammo-specific armor modifiers remain active and non-headshots keep their ammo-specific HP multipliers." \
+            --title "AFMBE: Left Behind V13 headshot damage test 55" \
+            --notes "Foundry V13 build 351 test. Headshots double damage after the ammunition-specific HP multiplier and armor reduction. Normal bullets deal 4x penetrating damage on headshots and hollow points deal 6x, with their armor modifiers intact." \
             --prerelease

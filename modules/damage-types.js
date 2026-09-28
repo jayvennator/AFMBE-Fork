@@ -24,7 +24,7 @@ export function resolveDamage(rawDamage, armorRoll, type, { headshot = false } =
     const adjustedDamage = rawDamage + (melee ? 1 : 0);
     const protection = Math.ceil(Math.max(0, armorRoll) * armor);
     const penetrating = Math.max(0, adjustedDamage - protection);
-    // Headshots replace the ammunition's HP multiplier; armor and its ammo-type modifier still apply.
-    const damageMultiplier = headshot ? 2 : hp;
+    // Headshots double the ammunition's HP multiplier after armor is applied.
+    const damageMultiplier = hp * (headshot ? 2 : 1);
     return { protection, penetrating, hpDamage: penetrating * damageMultiplier, armorMultiplier: armor, damageMultiplier, meleeBonus: melee ? 1 : 0 };
 }
