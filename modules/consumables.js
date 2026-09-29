@@ -57,6 +57,7 @@ export async function useConsumable(item) {
         ...(effect ? { [`flags.${CONSUMABLE_FLAG}.consumableEffects`]: effects } : {}) };
     try {
         if (Object.keys(changes).length) await actor.update(changes);
+        if (restored && Number(hp.value) + restored > 0 && actor.getFlag(CONSUMABLE_FLAG, 'regainedConsciousness')) await actor.unsetFlag(CONSUMABLE_FLAG, 'regainedConsciousness');
         await item.update({ 'system.qty': qty - 1 });
         const escape = foundry.utils.escapeHTML;
         const details = [restored ? `Restored ${restored} HP` : '', effect ? `${bonus > 0 ? '+' : ''}${bonus} ${effect.attribute || skill.name} for ${rounds} rounds${crashPenalty && crashDuration ? `; then -${crashPenalty} for ${crashDuration} rounds` : ''}` : ''].filter(Boolean).join('; ');

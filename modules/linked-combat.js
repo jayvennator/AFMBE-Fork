@@ -5,6 +5,7 @@ import { damageType } from './damage-types.js';
 import { weaponCategory } from './weapon-feed.js';
 import { volleyHits } from './fire-modes.js';
 import { disarmWeapon } from './dropped-weapons.js';
+import { healthState } from './health-states.js';
 const SYSTEM_ID = 'afmbe-left-behind';
 const resolving = new Set();
 const rolling = new Set();
@@ -101,10 +102,11 @@ export async function promptLinkedDefense(message) {
             catch (error) { return ui.notifications.warn(error.message); }
             const roll = await new Roll('1d10').evaluate();
             const automatic = traitRollEffects(defender, {kind: 'defense', mode: form.elements.mode.value, attribute: attributeKey, skillName: skill?.name});
-            const total = roll.total + attr + level + modifier + action.penalty + automatic.total;
+            const healthPenalty = healthState(defender).penalty;
+            const total = roll.total + attr + level + modifier + action.penalty + automatic.total + healthPenalty;
             const mode = form.elements.mode.value;
             await ChatMessage.create({ user: game.user.id, speaker: ChatMessage.getSpeaker({ actor: defender }), rolls: [roll],
-                content: `<h2>${escape(defender.name)} defends</h2><p>${escape(mode)}: ${roll.total} + ${escape(attributeKey)} ${attr} + ${escape(skill?.name ?? 'no skill')} ${level} + modifier ${modifier} + action ${action.penalty} + traits ${traitSummary(automatic, null, null, escape)} = <strong>${total}</strong></p>`,
+                content: `<h2>${escape(defender.name)} defends</h2><p>${escape(mode)}: ${roll.total} + ${escape(attributeKey)} ${attr} + ${escape(skill?.name ?? 'no skill')} ${level} + modifier ${modifier} + action ${action.penalty} + health ${healthPenalty} + traits ${traitSummary(automatic, null, null, escape)} = <strong>${total}</strong></p>`,
                 flags: { [SYSTEM_ID]: { defenseResponse: { attackUuid: message.uuid, defenderUuid: defender.uuid, mode, total } } } });
         } }
     }, default: 'roll' }, { classes: ['dialog', 'afmbe-left-behind'] }).render(true);

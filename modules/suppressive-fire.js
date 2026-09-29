@@ -6,6 +6,7 @@ import { damageType, hitBonus } from './damage-types.js';
 import { attachmentModifiers } from './attachments.js';
 import { attributeBonus, skillBonus } from './consumables.js';
 import { spendAction } from './action-economy.js';
+import { healthState } from './health-states.js';
 import { traitRollEffects } from './trait-effects.js';
 
 const SYSTEM = 'afmbe-left-behind';
@@ -132,7 +133,7 @@ async function rollWillpower(message) {
     const roll = await new Roll('1d10').evaluate();
     const will = (Number(actor.system.primaryAttributes?.willpower?.value) || 0) + attributeBonus(actor, 'willpower');
     const traits = traitRollEffects(actor, { kind: 'test', attribute: 'willpower', mode: 'fear' });
-    const total = roll.total + will + traits.total;
+    const total = roll.total + will + traits.total + healthState(actor).penalty;
     await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), rolls: [roll],
         content: `<h2>${esc(actor.name)} resists suppression</h2><p>Difficult Willpower: ${roll.total} + ${will} + traits ${traits.total} = ${total} vs 9. ${total >= 9 ? 'Resisted.' : 'Failed: choose a response next turn.'}</p>`,
         flags: { [SYSTEM]: { suppressionResponse: { messageUuid: message.uuid, kind: 'test', total, targetUuid: actor.uuid } } } });

@@ -1,5 +1,6 @@
 import { traitRollEffects, traitSummary } from './trait-effects.js';
 import { actionState, spendAction } from './action-economy.js';
+import { healthState, assertCanAct } from './health-states.js';
 import { attributeBonus, skillBonus } from './consumables.js';
 const SYSTEM_ID = 'afmbe-left-behind';
 const locks = new Set();
@@ -34,6 +35,7 @@ export function meleePreview(actor, weapon) {
 
 /** Reserve one strike. A failed Constitution task consumes the repeated Offensive action, but not Endurance. */
 export async function prepareMeleeStrike(actor, weapon, skill) {
+    assertCanAct(actor);
     if (!actor.isOwner) throw new Error('Only the actor owner can make a melee attack.');
     if (locks.has(actor.uuid)) throw new Error('Another melee attack is being recorded. Try again.');
     locks.add(actor.uuid);
@@ -58,7 +60,7 @@ export async function prepareMeleeStrike(actor, weapon, skill) {
                 const skillLevel = (Number(skill?.system.level) || 0) + skillBonus(actor, skill);
                 const roll = await new Roll('1d10').evaluate();
                 const automatic = traitRollEffects(actor, {kind: 'endurance', attribute: 'constitution', skillName: skill?.name});
-                const total = roll.total + constitution + skillLevel + actionPenalty + automatic.total;
+                const total = roll.total + constitution + skillLevel + actionPenalty + automatic.total + healthState(actor).penalty;
                 const passed = total >= 9;
                 const esc = foundry.utils.escapeHTML;
                 await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), rolls: [roll],

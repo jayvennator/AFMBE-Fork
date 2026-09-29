@@ -2,6 +2,7 @@ import { resolveDamage, damageType } from './damage-types.js';
 import { armorIntegrity, armorWear } from './armor-integrity.js';
 import { storageLocation } from './inventory-grid.js';
 import { resolveLegInjury, resolveArmInjury } from './leg-injury.js';
+import { resolveHealthDamage } from './health-states.js';
 const SYSTEM_ID = 'afmbe-left-behind';
 const applying = new Set();
 
@@ -76,6 +77,7 @@ export async function applyArmorDamage(message) {
         if (integrity.size) await actor.updateEmbeddedDocuments('Item', [...integrity].map(([id, state]) => ({ _id: id, 'system.armor_integrity.value': state.value })));
         await actor.update({ 'system.secondaryAttributes.hp.value': hp - total }, { enforceTypes: false });
         await message.update({ [`flags.${SYSTEM_ID}.armorDamage.applied`]: true });
+        if (total > 0) await resolveHealthDamage(actor, hp, hp - total);
         const lines = results.map((hit, index) => `Hit ${index + 1}: ${hit.raw} raw, ${hit.protection} armor after ammo type, ${hit.penetrating} penetrates ×${hit.multiplier}${data.blocked ? ', then blocked' : ''} = ${hit.damage} HP`).join('<br>');
         await ChatMessage.create({ user: game.user.id, speaker: ChatMessage.getSpeaker({ actor }),
             content: `<h2>Damage Calculation</h2><p><strong>${foundry.utils.escapeHTML(actor.name)} — ${location}</strong><br>Type ${foundry.utils.escapeHTML(type)}${data.blocked ? '; blocked' : ''}<br>${lines}<br>Total ${total} HP; HP ${hp} → ${hp - total}${broken.size ? `<br>Armor depleted: ${[...broken].map(name => foundry.utils.escapeHTML(name)).join(', ')}` : ''}</p>` });

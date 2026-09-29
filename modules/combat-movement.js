@@ -2,6 +2,7 @@ import { actionState, spendAction } from './action-economy.js';
 import { attributeBonus } from './consumables.js';
 import { traitRollEffects } from './trait-effects.js';
 import { legMovementAllowance, hasLegInjury } from './leg-injury.js';
+import { assertCanAct, healthState } from './health-states.js';
 
 const SYSTEM = 'afmbe-left-behind';
 const pending = new Map();
@@ -55,7 +56,7 @@ export async function attemptDash(actor) {
         const traits = traitRollEffects(actor, { kind: 'attribute', attribute: 'constitution' });
         const penalty = -2 * (Number(dash.attempts) || 0);
         const effects = attributeBonus(actor, 'constitution') + traits.total;
-        const total = Number(roll.total) + constitution * 2 + effects + penalty;
+        const total = Number(roll.total) + constitution * 2 + effects + penalty + healthState(actor).penalty;
         const success = total >= 9;
         await spendAction(actor, 'movement');
         await actor.setFlag(SYSTEM, 'dash', { key: ctx.key, attempts: (Number(dash.attempts) || 0) + 1,
@@ -69,6 +70,7 @@ export function registerCombatMovement() {
     function checkMove(token, waypoints) {
         const ctx = context(token);
         if (!ctx || game.user.isGM && globalThis.KeyboardManager?.MODIFIER_KEYS?.ALT && game.keyboard?.isModifierActive?.(KeyboardManager.MODIFIER_KEYS.ALT)) return;
+        try { assertCanAct(token.actor); } catch (error) { ui.notifications.warn(error.message); return false; }
         if (!ctx.active) { ui.notifications.warn('Move this token on its combat turn.'); return false; }
         if (!Array.isArray(waypoints) || !waypoints.length) return;
         const measured = token.measureMovementPath([{ x: token.x, y: token.y }, ...waypoints]);

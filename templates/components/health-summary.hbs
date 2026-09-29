@@ -4,6 +4,10 @@
     <div><strong>Endurance</strong><span>{{actor.system.secondaryAttributes.endurance_points.value}} / {{actor.system.secondaryAttributes.endurance_points.max}}</span></div>
     <div><strong>Essence</strong><span>{{actor.system.secondaryAttributes.essence.value}} / {{actor.system.secondaryAttributes.essence.max}}</span></div>
     <div><strong>Speed</strong><span>{{actor.system.secondaryAttributes.speed.halfValue}} m/sec</span></div>
+    {{#if actor.healthState.dead}}<p class="afmbe-health-alert">Survival Test failed · ZM resolution needed {{#if isGM}}<button type="button" class="clear-failed-survival">ZM: resolve</button>{{/if}}</p>
+    {{else if actor.healthState.dying}}<p class="afmbe-health-alert">Dying · cannot act until HP rises above −10</p>
+    {{else if actor.healthState.semiConscious}}<p class="afmbe-health-alert">{{#if actor.healthState.conscious}}Conscious at {{actor.healthState.hp}} HP · −5 actions{{else}}Semi-conscious · cannot act <button type="button" class="recover-consciousness">Willpower recovery Test</button>{{/if}}</p>
+    {{else if actor.healthState.penalty}}<p class="afmbe-health-alert">Severely injured · {{actor.healthState.penalty}} to actions</p>{{/if}}
     {{#if actor.legInjury}}<p class="afmbe-health-alert">Leg Injury · combat movement halved</p>{{/if}}
     {{#if actor.armInjury}}<p class="afmbe-health-alert">Arm Injury · attacks −2</p>{{/if}}
 </div>

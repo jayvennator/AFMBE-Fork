@@ -1,3 +1,4 @@
+import { assertCanAct } from './health-states.js';
 const SYSTEM_ID = 'afmbe-left-behind';
 export const ACTION_TYPES = Object.freeze(['movement', 'offensive', 'defensive', 'help']);
 const labels = { movement: 'Movement', offensive: 'Offensive', defensive: 'Defensive', help: 'Help' };
@@ -33,6 +34,7 @@ export function actionPanel(actor) {
 
 export async function spendAction(actor, type) {
     if (!ACTION_TYPES.includes(type) || !actor.isOwner) throw new Error('Action is unavailable for this actor.');
+    assertCanAct(actor);
     const key = actor.uuid;
     if (locks.has(key)) throw new Error('An action is already being recorded. Please retry.');
     locks.add(key);

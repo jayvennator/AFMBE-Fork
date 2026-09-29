@@ -1,4 +1,5 @@
 import { actionState, spendAction } from './action-economy.js';
+import { assertCanAct } from './health-states.js';
 import { attachmentModifiers } from './attachments.js';
 const SYSTEM_ID = 'afmbe-left-behind';
 const locks = new Set();
@@ -34,6 +35,7 @@ export function gunPreview(actor, weapon) {
 /** Reserves one trigger pull; recoil stays with this gun across Offensive actions this turn. */
 export async function prepareGunShot(actor, weapon) {
     if (!actor.isOwner) throw new Error('Only the actor owner can fire this weapon.');
+    assertCanAct(actor);
     if (locks.has(actor.uuid)) throw new Error('Another shot is being recorded. Try again.');
     locks.add(actor.uuid);
     try {

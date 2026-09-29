@@ -1,6 +1,7 @@
 import { spendAction } from './action-economy.js';
 import { attributeBonus, skillBonus } from './consumables.js';
 import { traitRollEffects } from './trait-effects.js';
+import { healthState } from './health-states.js';
 
 const SYSTEM = 'afmbe-left-behind';
 export const LEG_INJURY = 'afmbe-leg-injury';
@@ -40,7 +41,7 @@ async function resolveLimbInjury(actor, results, limb) {
     const traits = traitRollEffects(actor, { kind: 'attribute', attribute: 'constitution' });
     const effects = attributeBonus(actor, 'constitution') + traits.total;
     const roll = await new Roll('1d10').evaluate();
-    const total = Number(roll.total) + constitution * 2 + effects - (severe ? 2 : 0);
+    const total = Number(roll.total) + constitution * 2 + effects - (severe ? 2 : 0) + healthState(actor).penalty;
     const injured = total < 9;
     if (injured) {
         await actor.setFlag(SYSTEM, `${limb}Injury`, { damage: strongest, maxHp });
@@ -68,7 +69,7 @@ async function treatInjury(healer, limb) {
     const intelligence = Number(healer.system.primaryAttributes?.intelligence?.value) || 0;
     const skillLevel = Number(skill.system.level) || 0;
     const traits = traitRollEffects(healer, { kind: 'help', attribute: 'intelligence', skillName: skill.name });
-    const total = Number(roll.total) + intelligence + attributeBonus(healer, 'intelligence') + skillLevel + skillBonus(healer, skill) + traits.total + action.penalty;
+    const total = Number(roll.total) + intelligence + attributeBonus(healer, 'intelligence') + skillLevel + skillBonus(healer, skill) + traits.total + action.penalty + healthState(healer).penalty;
     await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: healer }), rolls: [roll],
         content: `<p>${foundry.utils.escapeHTML(healer.name)} treats ${foundry.utils.escapeHTML(target.name)}’s ${limb} (Help action): ${roll.total} + Intelligence ${intelligence} + First Aid ${skillLevel} + effects ${attributeBonus(healer, 'intelligence') + skillBonus(healer, skill) + traits.total} + action ${action.penalty} = <strong>${total}</strong> vs 9. ${total >= 9 ? 'Success: injury removed.' : 'Failure: injury remains.'}</p>`,
         flags: { [SYSTEM]: { legTreatment: { healerUuid: healer.uuid, targetUuid: target.uuid, limb, success: total >= 9 } } } });

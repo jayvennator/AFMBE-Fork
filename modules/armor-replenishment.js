@@ -1,5 +1,6 @@
 import { armorIntegrity } from './armor-integrity.js';
 import { spendAction } from './action-economy.js';
+import { healthState } from './health-states.js';
 import { attributeBonus, skillBonus } from './consumables.js';
 import { traitRollEffects, traitSummary } from './trait-effects.js';
 import { quickAccess, inCombat } from './inventory-grid.js';
@@ -38,7 +39,7 @@ export function promptArmorReplenishment(actor, armor) {
             catch (error) { return ui.notifications.warn(error.message); }
             const roll = await new Roll('1d10').evaluate();
             const traits = traitRollEffects(actor, { kind: 'help', attribute: key, skillName: skill?.name });
-            const total = roll.total + (Number(attributes[key]?.value) || 0) + attributeBonus(actor, key) + (Number(skill?.system.level) || 0) + skillBonus(actor, skill) + modifier + action.penalty + traits.total;
+            const total = roll.total + (Number(attributes[key]?.value) || 0) + attributeBonus(actor, key) + (Number(skill?.system.level) || 0) + skillBonus(actor, skill) + modifier + action.penalty + traits.total + healthState(actor).penalty;
             let result = 'Failure: armor and supplies unchanged.';
             if (total >= 9) {
                 const restored = Math.min(current.max, current.value + Math.floor(Number(supply.system.armorRestoration)));
