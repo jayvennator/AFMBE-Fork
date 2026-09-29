@@ -21,7 +21,8 @@ import { beginSuppressiveCone } from './suppressive-fire.js';
 import { movementPanel, attemptDash } from './combat-movement.js';
 import { hasLegInjury, treatLegInjury, clearLegInjury, hasArmInjury, treatArmInjury, clearArmInjury } from './leg-injury.js';
 import { droppedAt, pickUpWeapon } from './dropped-weapons.js';
-import { healthState, assertCanAct, recoverConsciousness, clearFailedSurvival } from './health-states.js';
+import { healthState, assertCanAct, recoverConsciousness, clearFailedSurvival, confirmDeath, extendCritical, expireCritical } from './health-states.js';
+import { promptMedicalAid } from './medical-aid.js';
 
 export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
 
@@ -441,6 +442,18 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         });
         html.find('.clear-failed-survival').click(async () => {
             try { await clearFailedSurvival(this.actor); } catch (error) { ui.notifications.warn(error.message); }
+        });
+        html.find('.confirm-death').click(async () => {
+            try { await confirmDeath(this.actor); } catch (error) { ui.notifications.warn(error.message); }
+        });
+        html.find('.extend-critical').click(async () => {
+            try { await extendCritical(this.actor); } catch (error) { ui.notifications.warn(error.message); }
+        });
+        html.find('.expire-critical').click(async () => {
+            try { await expireCritical(this.actor); } catch (error) { ui.notifications.warn(error.message); }
+        });
+        html.find('.medical-aid').click(event => {
+            try { promptMedicalAid(this.actor, event.currentTarget.dataset.kind); } catch (error) { ui.notifications.warn(error.message); }
         });
         html.find('.pick-up-weapon').click(async event => {
             try { await pickUpWeapon(this.actor, this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)); }

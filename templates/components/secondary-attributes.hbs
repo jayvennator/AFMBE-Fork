@@ -3,6 +3,8 @@
     {{#if actor.armInjury}}<p><strong>Arm Injury:</strong> attacks using the arm take −2. {{#if isGM}}<button type="button" class="clear-arm-injury">ZM: clear injury</button>{{/if}}</p>{{/if}}
     <button type="button" class="treat-leg-injury" title="Target one injured token; requires First Aid and spends a Help action">Treat targeted leg injury (First Aid)</button>
     <button type="button" class="treat-arm-injury" title="Target one injured token; requires First Aid and spends a Help action">Treat targeted arm injury (First Aid)</button>
+    <button type="button" class="medical-aid" data-kind="stabilize" title="Target one dying adjacent token; uses First Aid, a medical supply, and a Help action">Stabilize targeted ally</button>
+    <button type="button" class="medical-aid" data-kind="treat" title="Target one injured adjacent token; uses First Aid, a medical supply, and a Help action">Treat targeted ally</button>
     <h2>{{localize 'AFMBE.Attributes.Secondary.Title'}}</h2>
     <div class="resource-container">
         <div class="resource">

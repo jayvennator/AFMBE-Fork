@@ -15,6 +15,8 @@ import { renderSuppressiveFire, handleSuppressionResponse } from './suppressive-
 import { registerCombatMovement } from './combat-movement.js';
 import { LEG_INJURY, ARM_INJURY, handleLegTreatment } from './leg-injury.js';
 import { handleDroppedWeaponPickup } from './dropped-weapons.js';
+import { handleMedicalAid } from './medical-aid.js';
+import { advanceCriticalConditions } from './health-states.js';
 
 registerRegionCoverControls();
 registerCombatMovement();
@@ -99,6 +101,7 @@ Hooks.on('createChatMessage', (message) => {
     if (!game.user.isGM || game.users.activeGM?.id !== game.user.id) return;
     if (message.getFlag('afmbe-left-behind', 'armorDamage')) void applyArmorDamage(message);
     if (message.getFlag('afmbe-left-behind', 'legTreatment')) void handleLegTreatment(message);
+    if (message.getFlag('afmbe-left-behind', 'medicalAid')) void handleMedicalAid(message);
     if (message.getFlag('afmbe-left-behind', 'droppedWeaponPickup')) void handleDroppedWeaponPickup(message);
     if (message.getFlag('afmbe-left-behind', 'defenseResponse')) void handleDefenseResponse(message);
     if (message.getFlag('afmbe-left-behind', 'suppressionResponse')) void handleSuppressionResponse(message);
@@ -213,6 +216,7 @@ Hooks.on("renderChatMessage", (app, html, data) => {
 })
 
 Hooks.on('updateCombat', advanceConsumables);
+Hooks.on('updateCombat', advanceCriticalConditions);
 
 // Refresh open actor sheets when the active turn changes so action counts visibly reset.
 Hooks.on('updateCombat', (combat, changes) => {
