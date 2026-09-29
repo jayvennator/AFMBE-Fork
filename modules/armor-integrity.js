@@ -1,5 +1,13 @@
 export const DEFAULT_ARMOR_INTEGRITY = 10;
 
+/** Older generic items may still have real armor data; new generic items do not. */
+export function hasArmorProtection(item) {
+    if (item?.type === 'armor') return true;
+    if (item?.type !== 'item') return false;
+    const formula = String(item.system.armor_value ?? '').trim();
+    return Boolean(formula && !(Number.isFinite(Number(formula)) && Number(formula) === 0));
+}
+
 export function armorIntegrity(item) {
     const value = item.system.armor_integrity ?? {};
     const max = Math.max(1, Math.floor(Number(value.max) || DEFAULT_ARMOR_INTEGRITY));

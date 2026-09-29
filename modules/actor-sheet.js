@@ -11,7 +11,7 @@ import { normalizeCaliber } from './calibers.js';
 import { activeBonuses, attributeBonus, skillBonus, useConsumable, endConsumableEffect } from './consumables.js';
 import { postArmorRoll } from './armor-damage.js';
 import { promptArmorReplenishment } from './armor-replenishment.js';
-import { armorIntegrity } from './armor-integrity.js';
+import { armorIntegrity, hasArmorProtection } from './armor-integrity.js';
 import { attachmentModifiers, promptInstallAttachment, removeAttachment } from './attachments.js';
 import { SKILL_CATEGORIES, skillCategory } from './skill-categories.js';
 import { containers, dimensions, firstFreeCell, nearestFreeCell, moveInventoryItem, unpackItem, splitInventoryStack, stashItem, storageLocation, inCombat, handCount, HAND_LIMIT, STASH, inventoryActionCost, itemWeight } from './inventory-grid.js';
@@ -171,7 +171,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         actorData.magazine = magazine
         actorData.ammunition = ammunition
         actorData.armor = armor
-        actorData.readyArmor = [...armor, ...equippedItem.filter(entry => String(entry.system.armor_value ?? '0') !== '0')]
+        actorData.readyArmor = [...armor, ...equippedItem.filter(hasArmorProtection)]
             .filter(entry => entry.system.equipped && !storageLocation(entry))
         actorData.backpack = backpack
         actorData.rig = rig

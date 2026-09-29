@@ -1,5 +1,5 @@
 import { resolveDamage, damageType } from './damage-types.js';
-import { armorIntegrity, armorWear } from './armor-integrity.js';
+import { armorIntegrity, armorWear, hasArmorProtection } from './armor-integrity.js';
 import { storageLocation } from './inventory-grid.js';
 import { resolveLegInjury, resolveArmInjury } from './leg-injury.js';
 import { resolveHealthDamage } from './health-states.js';
@@ -52,7 +52,7 @@ export async function applyArmorDamage(message) {
             let protection = 0;
             let coveringItems = 0;
             for (const item of actor.items) {
-                if (!['item', 'armor'].includes(item.type) || !item.system.equipped || storageLocation(item)) continue;
+                if (!hasArmorProtection(item) || !item.system.equipped || storageLocation(item)) continue;
                 const coverage = item.system.armor_coverage ?? { body: true };
                 if (!coverage[location]) continue;
                 const state = integrity.get(item.id) ?? armorIntegrity(item);
