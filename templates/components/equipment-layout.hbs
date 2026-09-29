@@ -1,6 +1,9 @@
 <div class="afmbe-loadout">
     <section class="afmbe-loadout-slots">
         <h2>Equipped gear</h2>
+        {{#if actor.readyGrenades.length}}<div class="afmbe-equip-slot"><strong>Ready grenades</strong>
+            {{#each actor.readyGrenades as |grenade|}}<div class="item afmbe-equipped-item" data-item-id="{{grenade._id}}"><img class="afmbe-item-portrait" src="{{grenade.img}}" alt="" draggable="false"><div class="afmbe-equipped-details"><span class="item-name">{{grenade.name}} ×{{grenade.system.qty}}</span><small>Radius {{grenade.system.radius}}</small><button type="button" class="throw-grenade">Throw</button></div></div>{{/each}}
+        </div>{{/if}}
         {{#if actor.droppedWeapons.length}}<div class="afmbe-equip-slot"><strong>Dropped at your feet</strong>
             {{#each actor.droppedWeapons as |weapon|}}<div class="item afmbe-equipped-item" data-item-id="{{weapon._id}}"><img class="afmbe-item-portrait" src="{{weapon.img}}" alt="" draggable="false"><div class="afmbe-equipped-details"><span class="item-name">{{weapon.name}}</span><button type="button" class="pick-up-weapon">Pick up (Help action)</button></div></div>{{/each}}
         </div>{{/if}}

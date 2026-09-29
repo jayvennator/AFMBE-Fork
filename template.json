@@ -203,6 +203,7 @@
             "power",
             "weapon",
             "armor",
+            "grenade",
             "consumable",
             "attachment",
             "backpack",
@@ -406,6 +407,14 @@
             "skillName": "",
             "crashPenalty": 0,
             "crashDuration": 0
+        },
+        "grenade": {
+            "templates": ["common"],
+            "qty": 1,
+            "radius": 5,
+            "damage": "1d6",
+            "damage_type": "explosive",
+            "gridSize": { "width": 1, "height": 1 }
         },
         "magazine": {
             "templates": [

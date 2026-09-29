@@ -48,7 +48,7 @@ export function quickAccess(actor, item) {
     return location === 'pockets' || Boolean(actor.items.get(location)?.type === 'rig' && actor.items.get(location).system.equipped);
 }
 export function canCarryQuick(item) {
-    return ['magazine', 'ammunition', 'consumable', 'attachment'].includes(item.type) ||
+    return ['magazine', 'ammunition', 'consumable', 'grenade', 'attachment'].includes(item.type) ||
         (item.type === 'item' && Boolean(item.system.quickAccess));
 }
 export function placementError(actor, item, targetId, x, y, rotated = Boolean(item?.system.storage?.rotated)) {

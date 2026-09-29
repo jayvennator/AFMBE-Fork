@@ -1,0 +1,11 @@
+<form class="{{cssClass}}" autocomplete="off">
+{{> "systems/afmbe-left-behind/templates/components/item-sheet-header.hbs"}}
+<section class="description-container"><div class="item-attribute-sidebar"><h2>Grenade</h2><table><tbody>
+<tr><th>Quantity</th><td><input type="number" name="system.qty" min="0" step="1" value="{{item.system.qty}}"></td></tr>
+<tr><th>Blast radius (scene units)</th><td><input type="number" name="system.radius" min="0.1" step="0.1" value="{{item.system.radius}}"></td></tr>
+<tr><th>Damage</th><td><input type="text" name="system.damage" value="{{item.system.damage}}" placeholder="1d6"></td></tr>
+<tr><th>Damage type</th><td><select name="system.damage_type">{{selectOptions ammoDamageTypes selected=normalizedDamageType}}</select></td></tr>
+<tr><th>Weight</th><td><input type="number" name="system.encumbrance" value="{{item.system.encumbrance}}"></td></tr>
+{{> "systems/afmbe-left-behind/templates/components/grid-fields.hbs"}}
+</tbody></table><p>Place a circle at the blast point. The circle radius is set from this item; the ZM reviews affected tokens before the grenade is spent.</p></div>
+{{> "systems/afmbe-left-behind/templates/components/item-description-sidebar.hbs"}}</section></form>

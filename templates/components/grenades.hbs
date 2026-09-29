@@ -1,0 +1,4 @@
+<div class="item-table"><h2 class="header-with-button"><button type="button" class="create-item" data-create="grenade">+</button><span>Grenades</span></h2>
+<table><thead><tr><th class="table-left-align">Name</th><th>Qty</th><th>Radius</th><th></th></tr></thead><tbody>
+{{#each actor.grenade as |item|}}<tr class="item" data-item-id="{{item._id}}"><td class="item-name">{{item.name}}</td><td class="table-center-align">{{item.system.qty}}</td><td class="table-center-align">{{item.system.radius}}</td><td><button type="button" class="throw-grenade">Throw</button><a class="item-control item-delete" title="Delete"><i class="fas fa-trash"></i></a></td></tr>{{/each}}
+</tbody></table></div>

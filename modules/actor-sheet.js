@@ -24,6 +24,7 @@ import { droppedAt, pickUpWeapon } from './dropped-weapons.js';
 import { healthState, assertCanAct, recoverConsciousness, clearFailedSurvival, confirmDeath, extendCritical, expireCritical } from './health-states.js';
 import { promptMedicalAid } from './medical-aid.js';
 import { ITEM_CATEGORIES, itemCategory } from './item-categories.js';
+import { beginGrenadeCircle } from './grenades.js';
 
 export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
 
@@ -70,6 +71,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         const rig = [];
         const attachment = [];
         const consumable = [];
+        const grenade = [];
         const weapon = [];
         const magazine = [];
         const ammunition = [];
@@ -114,6 +116,9 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                 case "consumable":
                     consumable.push(i)
                     break
+                case "grenade":
+                    grenade.push(i)
+                    break
 
                 case "armor":
                     armor.push(i)
@@ -142,7 +147,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         }
 
         // Alphabetically sort all items
-        const itemCats = [item, equippedItem, weapon, armor, backpack, rig, attachment, consumable, magazine, ammunition, power, quality, skill, drawback]
+        const itemCats = [item, equippedItem, weapon, armor, backpack, rig, attachment, consumable, grenade, magazine, ammunition, power, quality, skill, drawback]
         for (let category of itemCats) {
             if (category.length > 1) {
                 category.sort((a, b) => {
@@ -229,6 +234,11 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         } : null
         actorData.attachment = attachment
         actorData.consumable = consumable
+        actorData.grenade = grenade
+        actorData.readyGrenades = grenade.filter(entry => {
+            const location = storageLocation(entry)
+            return location === 'pockets' || Boolean(this.actor.items.get(location)?.type === 'rig' && this.actor.items.get(location).system.equipped)
+        })
         actorData.readyConsumables = consumable.filter(entry => {
             const location = storageLocation(entry)
             return location === 'pockets' || Boolean(this.actor.items.get(location)?.type === 'rig' &&
@@ -418,6 +428,10 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         html.find('.armor-button-cell button').click(this._onArmorRoll.bind(this))
         html.find('.replenish-armor').click(event => promptArmorReplenishment(this.actor, this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)))
         html.find('.use-consumable').click(event => useConsumable(this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)))
+        html.find('.throw-grenade').click(event => {
+            try { beginGrenadeCircle(this.actor, this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)) }
+            catch (error) { ui.notifications.warn(error.message) }
+        })
         html.find('.end-consumable').click(async event => {
             await endConsumableEffect(this.actor, event.currentTarget.dataset.effectId);
         })
@@ -1372,6 +1386,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         if (['weapon', 'armor', 'item', 'backpack', 'rig'].includes(item.type))
             add(item.system.equipped ? 'Unequip' : 'Equip', () => this._setInventoryEquipped(item, !item.system.equipped))
         if (item.type === 'consumable') add('Use', () => useConsumable(item))
+        if (item.type === 'grenade') add('Throw grenade', () => beginGrenadeCircle(this.actor, item))
         if (item.type === 'magazine') add('Load ammunition', () => this._promptMagazineLoad(item))
         if (item.type === 'magazine' && Number(item.system.rounds) > 0)
             add('Unload ammunition', () => this._promptMagazineUnload(item))

@@ -17,6 +17,7 @@ import { LEG_INJURY, ARM_INJURY, handleLegTreatment } from './leg-injury.js';
 import { handleDroppedWeaponPickup } from './dropped-weapons.js';
 import { handleMedicalAid } from './medical-aid.js';
 import { advanceCriticalConditions } from './health-states.js';
+import { renderGrenadeBlast } from './grenades.js';
 
 registerRegionCoverControls();
 registerCombatMovement();
@@ -111,6 +112,7 @@ Hooks.on('createChatMessage', (message) => {
 Hooks.on("renderChatMessage", (app, html, data) => {
     void renderLinkedAttack(app, html[0]);
     renderSuppressiveFire(app, html[0]);
+    renderGrenadeBlast(app, html[0]);
     const armorDamage = app.getFlag('afmbe-left-behind', 'armorDamage');
     if (armorDamage && game.user.isGM && !armorDamage.applied) {
         const button = document.createElement('button');
