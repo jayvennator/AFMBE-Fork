@@ -4,6 +4,7 @@ import { weaponCategory, feedSystem } from './weapon-feed.js';
 import { SKILL_CATEGORIES, skillCategory } from './skill-categories.js';
 import { ATTACHMENT_SLOTS, canInstall, promptInstallAttachment, removeAttachment } from './attachments.js';
 import { storageLocation } from './inventory-grid.js';
+import { ITEM_CATEGORIES } from './item-categories.js';
 export class afmbeItemSheet extends foundry.appv1.sheets.ItemSheet {
 
     /** @override */
@@ -64,6 +65,7 @@ export class afmbeItemSheet extends foundry.appv1.sheets.ItemSheet {
         data.skillCategoryOptions = { auto: 'Auto (from skill name)', ...SKILL_CATEGORIES };
         data.effectiveSkillCategory = SKILL_CATEGORIES[skillCategory(this.item)];
         data.isGM = game.user.isGM;
+        data.itemCategoryOptions = ITEM_CATEGORIES;
         data.editable = data.options.editable;
         const itemData = data.system;
         data.data = itemData;

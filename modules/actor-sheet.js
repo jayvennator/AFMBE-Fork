@@ -23,6 +23,7 @@ import { hasLegInjury, treatLegInjury, clearLegInjury, hasArmInjury, treatArmInj
 import { droppedAt, pickUpWeapon } from './dropped-weapons.js';
 import { healthState, assertCanAct, recoverConsciousness, clearFailedSurvival, confirmDeath, extendCritical, expireCritical } from './health-states.js';
 import { promptMedicalAid } from './medical-aid.js';
+import { ITEM_CATEGORIES, itemCategory } from './item-categories.js';
 
 export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
 
@@ -81,6 +82,7 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         for (let i of sheetData.items) {
             switch (i.type) {
                 case "item":
+                    i.itemCategoryLabel = ITEM_CATEGORIES[itemCategory(i)]
                     if (i.system.equipped) { equippedItem.push(i) }
                     else { item.push(i) }
                     break
@@ -154,6 +156,9 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
 
         // Assign and return items
         actorData.item = item
+        actorData.itemGroups = Object.entries(ITEM_CATEGORIES).map(([key, label]) => ({
+            key, label, items: item.filter(entry => itemCategory(entry) === key)
+        })).filter(group => group.items.length)
         actorData.equippedItem = equippedItem
         actorData.weapon = weapon
         actorData.readyWeapons = weapon.filter(entry => entry.system.equipped && !storageLocation(entry))

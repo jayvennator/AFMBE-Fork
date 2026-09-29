@@ -1,4 +1,17 @@
-import { isStashed } from './inventory-grid.js';
+import { isStashed, storageLocation } from './inventory-grid.js';
+
+export function grantsResourceBonus(actor, item) {
+  if (!item?.system?.resource_bonus) return false;
+  // Innate traits remain active; physical gear must be worn or held ready.
+  if (['quality', 'drawback', 'skill', 'power', 'aspect'].includes(item.type)) return true;
+  if (item.type === 'attachment') {
+    const weapon = actor.items.get(item.system.installedWeaponId);
+    return Boolean(weapon?.system.equipped && !storageLocation(weapon) && !storageLocation(item) &&
+      !weapon.getFlag('afmbe-left-behind', 'droppedAt'));
+  }
+  return Boolean(['item', 'weapon', 'armor', 'backpack', 'rig'].includes(item.type) && item.system.equipped &&
+    !storageLocation(item) && !item.getFlag('afmbe-left-behind', 'droppedAt'));
+}
 
 export class afmbeActor extends Actor {
   async _preCreate(data, options, user) {
@@ -100,8 +113,8 @@ export class afmbeActor extends Actor {
   }
 
   _calcLifePoints(data) {
-    // Calculate bonuses from all items
-    let itemsWithBonus = this.items.filter(item => item.system.hasOwnProperty('resource_bonus'))
+    // Equipped gear and innate traits grant resource bonuses.
+    let itemsWithBonus = this.items.filter(item => grantsResourceBonus(this, item))
     let itemBonus = 0
     for (let item of itemsWithBonus) {
       itemBonus = itemBonus + item.system.resource_bonus.hp
@@ -120,8 +133,7 @@ export class afmbeActor extends Actor {
   }
 
   _calcEndurancePoints(data) {
-    // Calculate bonuses from all items
-    let itemsWithBonus = this.items.filter(item => item.system.hasOwnProperty('resource_bonus'))
+    let itemsWithBonus = this.items.filter(item => grantsResourceBonus(this, item))
     let itemBonus = 0
     for (let item of itemsWithBonus) {
       itemBonus = itemBonus + item.system.resource_bonus.endurance_points
@@ -131,8 +143,7 @@ export class afmbeActor extends Actor {
   }
 
   _calcSpeed(data) {
-    // Calculate bonuses from all items
-    let itemsWithBonus = this.items.filter(item => item.system.hasOwnProperty('resource_bonus'))
+    let itemsWithBonus = this.items.filter(item => grantsResourceBonus(this, item))
     let itemBonus = 0
     for (let item of itemsWithBonus) {
       itemBonus = itemBonus + item.system.resource_bonus.speed
@@ -143,8 +154,7 @@ export class afmbeActor extends Actor {
   }
 
   _calcEssencePool(data) {
-    // Calculate bonuses from all items
-    let itemsWithBonus = this.items.filter(item => item.system.hasOwnProperty('resource_bonus'))
+    let itemsWithBonus = this.items.filter(item => grantsResourceBonus(this, item))
     let itemBonus = 0
     for (let item of itemsWithBonus) {
       itemBonus = itemBonus + item.system.resource_bonus.essence
@@ -154,8 +164,7 @@ export class afmbeActor extends Actor {
   }
 
   _calcInitiative(data) {
-    // Calculate bonuses from all items
-    let itemsWithBonus = this.items.filter(item => item.system.hasOwnProperty('resource_bonus'))
+    let itemsWithBonus = this.items.filter(item => grantsResourceBonus(this, item))
     let itemBonus = 0
     for (let item of itemsWithBonus) {
       itemBonus = itemBonus + item.system.resource_bonus.initiative

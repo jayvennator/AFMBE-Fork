@@ -7,6 +7,7 @@
         <thead>
             <tr>
                 <th class="table-left-align">{{localize 'AFMBE.Common.Name'}}</th>
+                <th>Category</th>
                 <th>{{localize 'AFMBE.Common.Quantity'}}</th>
                 <th>{{localize 'AFMBE.Common.ArmorValue'}}</th>
                 <th>Integrity</th>
@@ -23,6 +24,7 @@
                         <div class="item-name">{{item.name}}</div>
                     </div>
                 </td>
+                <td class="table-center-align">{{item.itemCategoryLabel}}</td>
                 <td class="table-center-align">{{item.system.qty}}</td>
                 <td class="table-center-align armor-button-cell">
                     <button type="button">{{item.system.armor_value}}</button>
@@ -42,6 +44,8 @@
         <button type="button" class="create-item" data-create="item">+</button>
         <span>{{localize 'AFMBE.Items.Title'}}</span>
     </h2>
+    {{#each actor.itemGroups as |group|}}
+    <h3>{{group.label}}</h3>
     <table>
         <thead>
             <tr>
@@ -52,7 +56,7 @@
             </tr>
         </thead>
         <tbody>
-            {{#each actor.item as |item id|}}
+            {{#each group.items as |item id|}}
             <tr class="item" data-item-id="{{item._id}}">
                 <td>
                     <div class="item-name-flex-container">
@@ -68,4 +72,5 @@
             {{/each}}
         </tbody>
     </table>
+    {{/each}}
 </div>

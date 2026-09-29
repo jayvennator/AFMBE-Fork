@@ -22,6 +22,10 @@
                             <td><input type="text" name="system.qty" value="{{item.system.qty}}"></td>
                         </tr>
                         <tr>
+                            <th>Item category</th>
+                            <td><select name="system.itemCategory">{{selectOptions itemCategoryOptions selected=item.system.itemCategory}}</select></td>
+                        </tr>
+                        <tr>
                             <th>{{localize 'AFMBE.Common.ArmorValue'}}</th>
                             <td><input type="text" name="system.armor_value" value="{{item.system.armor_value}}"></td>
                         </tr>
