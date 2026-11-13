@@ -135,3 +135,37 @@ export async function resolveHealthDamage(actor, previousHp, currentHp) {
     await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), rolls: [roll],
         content: `<h2>${foundry.utils.escapeHTML(actor.name)}: Survival Test</h2><p>HP ${previousHp} → ${currentHp}. ${roll.total} + Constitution ${constitution * 2} + effects ${effects} = <strong>${total}</strong> vs 9. ${total >= 9 ? 'Dying; First Aid can stabilize at 9.' : 'Critical: First Aid at 13 before the end of the character’s next turn. The ZM confirms death if the window expires.'}</p>` });
 }
+
+const HP_PATH = 'system.secondaryAttributes.hp.value';
+
+/**
+ * Keep health states in step with every HP change, not only automatic damage:
+ * manual sheet edits, healing items and First Aid. Runs on the client that made the change.
+ */
+export function registerHealthTracking() {
+    Hooks.on('preUpdateActor', (actor, changes, options) => {
+        if (foundry.utils.getProperty(changes, HP_PATH) === undefined) return;
+        options.afmbePreviousHp = Number(actor.system.secondaryAttributes?.hp?.value) || 0;
+    });
+    Hooks.on('updateActor', async (actor, changes, options, userId) => {
+        if (userId !== game.user.id || !Object.hasOwn(options, 'afmbePreviousHp')) return;
+        if (foundry.utils.getProperty(changes, HP_PATH) === undefined) return;
+        const previous = Number(options.afmbePreviousHp) || 0;
+        const current = Number(actor.system.secondaryAttributes?.hp?.value) || 0;
+        if (current === previous) return;
+        try {
+            if (current > previous) await resolveHealing(actor, current);
+            else if (!options.afmbeHealthHandled) await resolveHealthDamage(actor, previous, current);
+        } catch (error) { console.error('AFMBE health state update failed', error); }
+    });
+}
+
+/** Healing above −10 ends the dying state and its rescue deadline; above 0 ends semi-consciousness. */
+export async function resolveHealing(actor, currentHp) {
+    if (currentHp > -10) {
+        if (actor.getFlag(SYSTEM, 'criticalCondition')) await actor.unsetFlag(SYSTEM, 'criticalCondition');
+        if (actor.getFlag(SYSTEM, 'failedSurvival')) await actor.unsetFlag(SYSTEM, 'failedSurvival');
+        if (actor.getFlag(SYSTEM, 'stabilized')) await actor.unsetFlag(SYSTEM, 'stabilized');
+    }
+    if (currentHp > 0 && actor.getFlag(SYSTEM, 'regainedConsciousness')) await actor.unsetFlag(SYSTEM, 'regainedConsciousness');
+}

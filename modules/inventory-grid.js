@@ -99,6 +99,16 @@ export function nearestFreeCell(actor, item, targetId, x, y, rotated = Boolean(i
     candidates.sort((a, b) => a.distance - b.distance || a.y - b.y || a.x - b.x);
     return candidates.find(cell => !placementError(actor, item, targetId, cell.x, cell.y, rotated)) ?? null;
 }
+/** Where newly loose gear goes: a free hand, then pockets or a worn rig, then the off-character stash. */
+export function looseDestination(actor, item) {
+    if (handCount(actor) < HAND_LIMIT) return { containerId: '', x: 0, y: 0 };
+    const ready = ['pockets', ...actor.items.filter(entry => entry.type === 'rig' && entry.system.equipped).map(entry => entry.id)];
+    for (const id of ready) {
+        const cell = firstFreeCell(actor, item, id, false);
+        if (cell) return { containerId: id, x: cell.x, y: cell.y };
+    }
+    return { containerId: STASH, x: 0, y: 0 };
+}
 export async function moveInventoryItem(actor, item, targetId, x, y, rotated = Boolean(item?.system.storage?.rotated)) {
     const error = placementError(actor, item, targetId, x, y, rotated);
     if (error) throw new Error(error);

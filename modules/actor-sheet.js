@@ -916,7 +916,9 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
         const weaponId = event.currentTarget.closest('.item')?.dataset.itemId
         const weapon = this.actor.items.get(weaponId)
         if (!weapon) return
-        if (!weapon.system.equipped || storageLocation(weapon)) return ui.notifications.warn('Equip this weapon before attacking.')
+        if (droppedAt(weapon)) return ui.notifications.warn('Pick up this dropped weapon before attacking with it.')
+        // Creatures' weapons are usually natural (claws, bite), so only characters must ready a weapon first.
+        if (this.actor.type === 'character' && (!weapon.system.equipped || storageLocation(weapon))) return ui.notifications.warn('Equip this weapon before attacking.')
 
         const attributes = this.actor.system.primaryAttributes ?? {}
         const skills = this.actor.items.filter(item => item.type === 'skill')
@@ -1151,8 +1153,6 @@ export class afmbeActorSheet extends foundry.appv1.sheets.ActorSheet {
                             targetTokenUuid: targetedTokens[0].document.uuid, targetWeaponUuid: targetWeapon?.uuid ?? null,
                             melee: isMelee, roundsFired: firing.rounds, hits, firingMode: firing.mode, criticalHit, status: success ? 'pending' : 'miss', blocked: false
                         } } } })
-                    if (feed === 'direct' && Number(looseProjectile.system.qty) === 0)
-                        await this.actor.deleteEmbeddedDocuments('Item', [looseProjectile.id])
                     if (feed === 'direct' && Number(looseProjectile.system.qty) === 0)
                         await this.actor.deleteEmbeddedDocuments('Item', [looseProjectile.id])
                     try {

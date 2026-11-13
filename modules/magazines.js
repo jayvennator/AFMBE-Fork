@@ -28,13 +28,14 @@ export async function reloadWeapon(actor, weapon, magazine) {
     if (!weapon?.system.equipped || weapon.system.storage?.containerId) return alert('Equip the weapon before reloading it.');
     if (!actor.isOwner || !weapon || !magazine || !compatibleMagazines(actor, weapon).some(item => item.id === magazine.id)) return alert('Choose a compatible spare magazine with valid capacity and rounds.');
     const old = loadedMagazine(actor, weapon);
+    // Spend the action first so an incapacitated character cannot swap magazines before the action is refused.
+    const action = await spendAction(actor, 'help');
     const updates = [{ _id: magazine.id, 'system.insertedInWeaponId': weapon.id,
         'system.storage.containerId': '', 'system.storage.x': 0, 'system.storage.y': 0 }];
     if (old) updates.push({ _id: old.id, 'system.insertedInWeaponId': '', 'system.storage.containerId': '' });
     await actor.updateEmbeddedDocuments('Item', updates);
     await weapon.update({ 'system.usesMagazines': true, 'system.loadedMagazineId': magazine.id,
         'system.capacity.value': count(magazine.system.rounds), 'system.capacity.max': count(magazine.system.capacity) });
-    const action = await spendAction(actor, 'help');
     const esc = foundry.utils.escapeHTML;
     await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<h2>${esc(actor.name)} reloads ${esc(weapon.name)}</h2><p>${esc(magazine.name)} (${count(magazine.system.rounds)}/${count(magazine.system.capacity)} ${esc(damageType(magazine.system.ammoType))} rounds).${action.tracked ? ` Help action ${action.used}; repeat penalty ${action.penalty}.` : ''}</p>` });
     return true;

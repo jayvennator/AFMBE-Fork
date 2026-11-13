@@ -16,6 +16,12 @@ const degrees = angle => ((angle % 360) + 360) % 360;
 export const MAX_SUPPRESSION_SPACES = 10;
 export const suppressionMaxDistance = scene => Number(scene.grid.distance) * MAX_SUPPRESSION_SPACES;
 
+/** Remove a spent or cancelled placement circle/cone; it is only a placement aid. */
+export async function removeTemplate(uuid) {
+    try { const template = await fromUuid(uuid); if (template) await template.delete(); }
+    catch (error) { console.warn('AFMBE could not remove a measured template', error); }
+}
+
 export function coneContains(template, token, scene) {
     const scale = Number(scene.grid.distance) / Number(canvas.grid.size);
     const radius = Math.min(Number(template.distance), suppressionMaxDistance(scene)) / scale;
@@ -54,6 +60,7 @@ export function beginSuppressiveCone(actor, weapon, skill, attribute) {
         busy.delete(key);
         if (Math.hypot(template.x - shooter.center.x, template.y - shooter.center.y) > Number(canvas.grid.size) * 0.75) {
             ui.notifications.warn('Draw the cone starting at the shooter token. No ammunition was spent.');
+            await template.delete().catch(() => null);
             return;
         }
         if (Number(template.distance) > maxDistance) await template.update({ distance: maxDistance });
@@ -82,7 +89,7 @@ async function review(message) {
         `<label><input type="checkbox" name="targets" value="${esc(token.document.id)}" ${coneContains(template, token, scene) ? 'checked' : ''}>${esc(token.name)}</label>`).join('<br>');
     new Dialog({ title: 'ZM: review suppressive fire', content: `<form><p>Maximum range: ${MAX_SUPPRESSION_SPACES} grid spaces. Choose affected tokens. Confirm commits 10 rounds and the attack action.</p>${list || '<p>No other tokens on the scene.</p>'}</form>`, buttons: {
         cancel: { label: 'Keep pending' },
-        deny: { label: 'Cancel shot', callback: () => message.update({ [`flags.${SYSTEM}.suppression.status`]: 'cancelled' }) },
+        deny: { label: 'Cancel shot', callback: async () => { await message.update({ [`flags.${SYSTEM}.suppression.status`]: 'cancelled' }); await removeTemplate(data.templateUuid); } },
         fire: { label: 'Confirm fire', callback: async html => {
             const ids = [...html[0].querySelectorAll('input[name="targets"]:checked')].map(input => input.value);
             try { await commitSuppression(message, ids); } catch (error) { ui.notifications.warn(error.message); }
@@ -112,6 +119,7 @@ async function commitSuppression(message, targetIds) {
         if (magazine) await magazine.update({ 'system.rounds': rounds - 10 });
         await weapon.update({ 'system.capacity.value': rounds - 10 });
         await message.update({ [`flags.${SYSTEM}.suppression.status`]: 'fired' });
+        await removeTemplate(data.templateUuid);
         const skill = actor.items.get(data.skillId);
         const attr = (Number(actor.system.primaryAttributes?.[data.attribute]?.value) || 0) + attributeBonus(actor, data.attribute);
         const bonus = attr + (Number(skill?.system.level) || 0) + skillBonus(actor, skill) + attachmentModifiers(actor, weapon).attack + shot.actionPenalty + shot.recoilPenalty - 4;
@@ -133,9 +141,10 @@ async function rollWillpower(message) {
     const roll = await new Roll('1d10').evaluate();
     const will = (Number(actor.system.primaryAttributes?.willpower?.value) || 0) + attributeBonus(actor, 'willpower');
     const traits = traitRollEffects(actor, { kind: 'test', attribute: 'willpower', mode: 'fear' });
-    const total = roll.total + will + traits.total + healthState(actor).penalty;
+    const health = healthState(actor).penalty;
+    const total = roll.total + will + traits.total + health;
     await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), rolls: [roll],
-        content: `<h2>${esc(actor.name)} resists suppression</h2><p>Difficult Willpower: ${roll.total} + ${will} + traits ${traits.total} = ${total} vs 9. ${total >= 9 ? 'Resisted.' : 'Failed: choose a response next turn.'}</p>`,
+        content: `<h2>${esc(actor.name)} resists suppression</h2><p>Difficult Willpower: ${roll.total} + ${will} + traits ${traits.total} + health ${health} = ${total} vs 9. ${total >= 9 ? 'Resisted.' : 'Failed: choose a response next turn.'}</p>`,
         flags: { [SYSTEM]: { suppressionResponse: { messageUuid: message.uuid, kind: 'test', total, targetUuid: actor.uuid } } } });
 }
 
@@ -152,11 +161,13 @@ async function chooseResponse(message, choice) {
     } else if (choice === 'duck') {
         const action = await spendAction(actor, 'defensive');
         const roll = await new Roll('1d10').evaluate();
-        const dex = Number(actor.system.primaryAttributes?.dexterity?.value) || 0;
+        const dex = (Number(actor.system.primaryAttributes?.dexterity?.value) || 0) + attributeBonus(actor, 'dexterity');
         const dodge = actor.items.find(item => item.type === 'skill' && /^dodge$/i.test(item.name));
         const skill = (Number(dodge?.system.level) || 0) + skillBonus(actor, dodge);
-        const total = roll.total + dex + skill + action.penalty;
-        await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), rolls: [roll], content: `<p>${esc(actor.name)} ducks: ${roll.total} + Dexterity ${dex} + Dodge ${skill} + action ${action.penalty} = ${total} vs 9. ${total >= 9 ? 'Safe on the ground.' : 'Failed; exposed to one attack.'}</p>`,
+        const traits = traitRollEffects(actor, { kind: 'defense', mode: 'duck', attribute: 'dexterity', skillName: dodge?.name });
+        const health = healthState(actor).penalty;
+        const total = roll.total + dex + skill + action.penalty + traits.total + health;
+        await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), rolls: [roll], content: `<p>${esc(actor.name)} ducks: ${roll.total} + Dexterity ${dex} + Dodge ${skill} + action ${action.penalty} + traits ${traits.total} + health ${health} = ${total} vs 9. ${total >= 9 ? 'Safe on the ground.' : 'Failed; exposed to one attack.'}</p>`,
             flags: { [SYSTEM]: { suppressionResponse: { messageUuid: message.uuid, kind: 'choice', choice: total >= 9 ? 'ducked' : 'exposed', targetUuid: actor.uuid } } } });
     } else if (choice === 'exposed') await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<p>${esc(actor.name)} remains exposed to suppressive fire.</p>`,
         flags: { [SYSTEM]: { suppressionResponse: { messageUuid: message.uuid, kind: 'choice', choice: 'exposed', targetUuid: actor.uuid } } } });

@@ -2,7 +2,8 @@ import { spendAction } from './action-economy.js';
 import { attributeBonus, skillBonus } from './consumables.js';
 import { traitRollEffects, traitSummary } from './trait-effects.js';
 import { weaponCategory } from './weapon-feed.js';
-import { quickAccess, inCombat, storageLocation } from './inventory-grid.js';
+import { quickAccess, inCombat, storageLocation, looseDestination, STASH } from './inventory-grid.js';
+import { healthState } from './health-states.js';
 
 export const ATTACHMENT_SLOTS = Object.freeze(['optic', 'muzzle', 'underbarrel', 'stock', 'accessory']);
 const safe = value => foundry.utils.escapeHTML(String(value ?? ''));
@@ -72,7 +73,8 @@ export function promptInstallAttachment(actor, weapon, slot = null) {
             const traits = traitRollEffects(actor, { kind: 'help', attribute: key, skillName: skill?.name });
             const attr = (Number(attributes[key]?.value) || 0) + attributeBonus(actor, key);
             const level = (Number(skill?.system.level) || 0) + skillBonus(actor, skill);
-            const total = roll.total + attr + level + modifier + action.penalty + traits.total;
+            const health = healthState(actor).penalty;
+            const total = roll.total + attr + level + modifier + action.penalty + traits.total + health;
             let outcome = 'Failure: attachment remains uninstalled.';
             if (total >= 9) {
                 if (canInstall(actor, weapon, attachment) && (!slot || attachment.system.slot === slot)) {
@@ -83,15 +85,20 @@ export function promptInstallAttachment(actor, weapon, slot = null) {
                 } else outcome = 'Slot changed during the roll; no attachment installed.';
             }
             await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), rolls: [roll],
-                content: `<h2>${safe(actor.name)} installs an attachment</h2><p>Roll ${roll.total} + ${safe(key)} ${attr} + ${safe(skill?.name ?? 'no skill')} ${level} + modifier ${modifier} + Help action ${action.penalty} + traits ${safe(traitSummary(traits, null, null, safe))} = <strong>${total}</strong> vs 9.</p><p>${outcome}</p>` });
+                content: `<h2>${safe(actor.name)} installs an attachment</h2><p>Roll ${roll.total} + ${safe(key)} ${attr} + ${safe(skill?.name ?? 'no skill')} ${level} + modifier ${modifier} + Help action ${action.penalty} + health ${health} + traits ${traitSummary(traits, null, null, safe)} = <strong>${total}</strong> vs 9.</p><p>${outcome}</p>` });
         } } }, default: 'install' }).render(true);
 }
 
 export async function removeAttachment(actor, attachment) {
     if (!actor?.isOwner || attachment?.type !== 'attachment' || !attachment.system.installedWeaponId) return;
     const weapon = actor.items.get(attachment.system.installedWeaponId);
+    const placeable = { id: attachment.id, name: attachment.name, type: attachment.type, parent: attachment.parent,
+        system: { ...attachment.system, installedWeaponId: '' }, getFlag: () => null };
+    const destination = looseDestination(actor, placeable);
+    if (destination.containerId === STASH && inCombat(actor)) throw new Error('Free a hand, pocket, or rig space before removing this attachment.');
     const action = await spendAction(actor, 'help');
-    await attachment.update({ 'system.installedWeaponId': '' });
+    await attachment.update({ 'system.installedWeaponId': '', 'system.storage.containerId': destination.containerId,
+        'system.storage.x': destination.x, 'system.storage.y': destination.y });
     await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
         content: `<p>${safe(actor.name)} removes ${safe(attachment.name)} from ${safe(weapon?.name ?? 'a missing weapon')} (Help action${action.tracked ? `; ${action.used}, repeat penalty ${action.penalty}` : ''}).</p>` });
 }

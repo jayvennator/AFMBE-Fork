@@ -65,7 +65,7 @@ export async function useConsumable(item) {
     } catch (error) { console.error('AFMBE consumable use failed', error); ui.notifications.error('Could not use consumable; check its quantity and effects.'); }
 }
 export async function advanceConsumables(combat, changed) {
-    if (!game.user.isGM || !Object.hasOwn(changed, 'round') || Number(changed.round) <= 0) return;
+    if (!game.user.isGM || game.users.activeGM?.id !== game.user.id || !Object.hasOwn(changed, 'round') || Number(changed.round) <= 0) return;
     for (const actor of new Set(combat.combatants.map(combatant => combatant.actor).filter(Boolean))) {
         const effects = activeBonuses(actor);
         if (!effects.length) continue;

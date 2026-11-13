@@ -1,6 +1,7 @@
 import { quickAccess } from './inventory-grid.js';
 import { spendAction } from './action-economy.js';
 import { damageType } from './damage-types.js';
+import { removeTemplate } from './suppressive-fire.js';
 
 const SYSTEM = 'afmbe-left-behind';
 const busy = new Set();
@@ -60,7 +61,7 @@ async function review(message) {
     const list = tokens.map(token => `<label><input type="checkbox" name="targets" value="${esc(token.document.id)}" ${blastContains(template, token, scene) ? 'checked' : ''}>${esc(token.name)}</label>`).join('<br>');
     new Dialog({ title: `ZM: ${esc((await fromUuid(data.itemUuid))?.name ?? 'grenade')} blast`,
         content: `<form><p>Radius ${data.radius} ${esc(scene.grid.units || 'scene units')}. Confirm spends one grenade and an Offensive action, then rolls blast damage against selected tokens.</p>${list || '<p>No tokens on the scene.</p>'}</form>`,
-        buttons: { cancel: { label: 'Keep pending' }, deny: { label: 'Cancel blast', callback: () => message.update({ [`flags.${SYSTEM}.grenadeBlast.status`]: 'cancelled' }) },
+        buttons: { cancel: { label: 'Keep pending' }, deny: { label: 'Cancel blast', callback: async () => { await message.update({ [`flags.${SYSTEM}.grenadeBlast.status`]: 'cancelled' }); await removeTemplate(data.templateUuid); } },
             fire: { label: 'Detonate', callback: async html => {
                 const ids = [...html[0].querySelectorAll('input[name="targets"]:checked')].map(input => input.value);
                 try { await detonate(message, ids); } catch (error) { ui.notifications.warn(error.message); }
@@ -97,6 +98,7 @@ export async function detonate(message, targetIds) {
             flags: { [SYSTEM]: { armorDamage: { targetUuid: token.actor.uuid, targetName: token.name, damage: roll.total,
                 damages: [roll.total], damageType: damageType(item.system.damage_type), location: 'body', applied: false } } } });
         await message.update({ [`flags.${SYSTEM}.grenadeBlast.status`]: 'detonated' });
+        await removeTemplate(data.templateUuid);
     } finally { busy.delete(message.uuid); }
 }
 

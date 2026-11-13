@@ -2,6 +2,10 @@ import { SKILL_CATEGORIES, skillCategory } from './skill-categories.js';
 import { toggleCoverStance } from './region-cover.js';
 import { hasLegInjury, clearLegInjury, treatLegInjury, hasArmInjury, clearArmInjury, treatArmInjury } from './leg-injury.js';
 import { droppedAt, pickUpWeapon } from './dropped-weapons.js';
+import { afmbeActorSheet } from './actor-sheet.js';
+import { isMeleeAttack } from './linked-combat.js';
+import { weaponCategory, feedSystem, removeMagazine } from './weapon-feed.js';
+import { promptInstallAttachment } from './attachments.js';
 
 export class afmbeCreatureSheet extends foundry.appv1.sheets.ActorSheet {
 
@@ -59,6 +63,13 @@ export class afmbeCreatureSheet extends foundry.appv1.sheets.ActorSheet {
                     break
 
                 case "weapon":
+                    // Same flags the character sheet sets, so the shared weapon rows render and route correctly.
+                    i.isMeleeWeapon = isMeleeAttack(i)
+                    i.weaponCategory = weaponCategory(i)
+                    i.feed = feedSystem(i)
+                    i.isBow = i.weaponCategory === "bow"
+                    i.hasInsertedMagazine = Boolean(i.system.loadedMagazineId)
+                    i.canUnload = ["internal", "cylinder", "single"].includes(i.feed) && Number(i.system.capacity?.value) > 0
                     weapon.push(i)
                     break
 
@@ -93,6 +104,10 @@ export class afmbeCreatureSheet extends foundry.appv1.sheets.ActorSheet {
         actorData.item = item
         actorData.equippedItem = equippedItem
         actorData.weapon = weapon
+        actorData.meleeWeapons = weapon.filter(i => i.weaponCategory === "melee")
+        actorData.firearms = weapon.filter(i => i.weaponCategory === "firearm")
+        actorData.bows = weapon.filter(i => ["bow", "crossbow"].includes(i.weaponCategory))
+        actorData.launchers = weapon.filter(i => i.weaponCategory === "launcher")
         actorData.droppedWeapons = weapon.filter(entry => droppedAt(this.actor.items.get(entry._id ?? entry.id)))
         actorData.armor = armor
         actorData.skill = skill
@@ -117,6 +132,20 @@ export class afmbeCreatureSheet extends foundry.appv1.sheets.ActorSheet {
 
         // Buttons and Event Listeners
         html.find('.attribute-roll').click(this._onAttributeRoll.bind(this))
+        // Creatures use the same linked attack pipeline as characters: defense prompt, armor, injuries and health states.
+        html.find('.attack-roll').click(this._onAttackRoll.bind(this))
+        html.find('.reload-weapon').click(this._onReloadWeapon.bind(this))
+        html.find('.unload-weapon').click(this._onUnloadWeapon.bind(this))
+        html.find('.remove-magazine').click(async event => {
+            const weapon = this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId);
+            try { await removeMagazine(this.actor, weapon); } catch (error) { ui.notifications.warn(error.message); }
+        })
+        html.find('.install-attachment').click(event => promptInstallAttachment(this.actor, this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)))
+        html.find('.toggle-weapon-equipped').click(async event => {
+            const weapon = this.actor.items.get(event.currentTarget.closest('.item')?.dataset.itemId)
+            try { await this._setInventoryEquipped(weapon, !weapon?.system.equipped) }
+            catch (error) { ui.notifications.warn(error.message) }
+        })
         html.find('.take-cover').click(async () => {
             try { await toggleCoverStance(this.actor); }
             catch (error) { ui.notifications.warn(error.message); }
@@ -559,3 +588,7 @@ export class afmbeCreatureSheet extends foundry.appv1.sheets.ActorSheet {
     }
 
 }
+
+// Borrow the character sheet's weapon handlers so creature attacks follow the same rules.
+for (const name of ['_onAttackRoll', '_onReloadWeapon', '_onUnloadWeapon', '_setInventoryEquipped'])
+    afmbeCreatureSheet.prototype[name] = afmbeActorSheet.prototype[name];

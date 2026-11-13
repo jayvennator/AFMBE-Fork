@@ -28,8 +28,32 @@ export async function postArmorRoll(actor, item, roll, formula) {
     });
 }
 
+/**
+ * Damage messages are applied automatically, so check where they came from. A ZM's message is trusted.
+ * A player's message must be the damage roll for a real hit by an actor that player owns, against the
+ * same target and location, with one matching damage roll per hit, and it can be applied only once.
+ */
+async function assertDamageAuthorized(message, data, attack, damages, location, approvedByGM) {
+    const authorRef = message.author ?? message.user;
+    const author = game.users.get(authorRef?.id ?? authorRef);
+    if (!author) throw new Error('The damage message has no author.');
+    if (attack?.damageApplied) throw new Error('Damage for this attack was already applied.');
+    if (author.isGM || approvedByGM) return;
+    const attacker = attack ? await fromUuid(attack.attackerUuid) : null;
+    const weapon = attack ? await fromUuid(attack.weaponUuid) : null;
+    const rolls = message.rolls ?? [];
+    const valid = attack && attacker && weapon && attacker.testUserPermission(author, 'OWNER') &&
+        ['rolling', 'complete'].includes(attack.status) && attack.targetUuid === data.targetUuid &&
+        (['body', 'head', 'arms', 'legs'].includes(attack.location) ? attack.location : 'body') === location &&
+        Boolean(attack.blocked) === Boolean(data.blocked) && Boolean(attack.criticalHit) === Boolean(data.criticalHit) &&
+        damages.length === Math.max(1, Math.min(10, Number(attack.hits) || 1)) && rolls.length === damages.length &&
+        rolls.every((roll, index) => Math.max(0, Number(roll.total) || 0) === damages[index] &&
+            String(roll.formula ?? '').replace(/\s/g, '').toLowerCase() === String(weapon.system.damage_string ?? '').replace(/\s/g, '').toLowerCase());
+    if (!valid) throw new Error('This damage roll is not linked to a valid hit, so it was not applied automatically. The ZM can review it and use its Apply damage button.');
+}
+
 /** Resolve a damage chat message against one targeted actor's equipped armor. */
-export async function applyArmorDamage(message) {
+export async function applyArmorDamage(message, { approvedByGM = false } = {}) {
     if (!game.user.isGM) return;
     const data = message.getFlag(SYSTEM_ID, 'armorDamage');
     if (!data || data.applied || applying.has(message.id)) return;
@@ -45,6 +69,9 @@ export async function applyArmorDamage(message) {
         const damages = Array.isArray(data.damages) && data.damages.length <= 10 && data.damages.length > 0
             ? data.damages.map(value => Math.max(0, Number(value) || 0)) : [damage];
         const type = damageType(data.damageType);
+        const attackMessage = data.attackUuid ? await fromUuid(data.attackUuid) : null;
+        const attack = attackMessage?.getFlag(SYSTEM_ID, 'pendingAttack') ?? null;
+        await assertDamageAuthorized(message, data, attack, damages, location, approvedByGM);
         const results = [];
         const integrity = new Map();
         const broken = new Set();
@@ -75,8 +102,10 @@ export async function applyArmorDamage(message) {
         }
         const total = results.reduce((sum, hit) => sum + hit.damage, 0);
         if (integrity.size) await actor.updateEmbeddedDocuments('Item', [...integrity].map(([id, state]) => ({ _id: id, 'system.armor_integrity.value': state.value })));
-        await actor.update({ 'system.secondaryAttributes.hp.value': hp - total }, { enforceTypes: false });
+        // Health is resolved explicitly below, so the generic HP tracker skips this update.
+        await actor.update({ 'system.secondaryAttributes.hp.value': hp - total }, { enforceTypes: false, afmbeHealthHandled: true });
         await message.update({ [`flags.${SYSTEM_ID}.armorDamage.applied`]: true });
+        if (attack) await attackMessage.update({ [`flags.${SYSTEM_ID}.pendingAttack.damageApplied`]: true });
         if (total > 0) await resolveHealthDamage(actor, hp, hp - total);
         const lines = results.map((hit, index) => `Hit ${index + 1}: ${hit.raw} raw, ${hit.protection} armor after ammo type, ${hit.penetrating} penetrates ×${hit.multiplier}${data.blocked ? ', then blocked' : ''} = ${hit.damage} HP`).join('<br>');
         await ChatMessage.create({ user: game.user.id, speaker: ChatMessage.getSpeaker({ actor }),

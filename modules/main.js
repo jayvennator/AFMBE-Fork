@@ -16,11 +16,12 @@ import { registerCombatMovement } from './combat-movement.js';
 import { LEG_INJURY, ARM_INJURY, handleLegTreatment } from './leg-injury.js';
 import { handleDroppedWeaponPickup } from './dropped-weapons.js';
 import { handleMedicalAid } from './medical-aid.js';
-import { advanceCriticalConditions } from './health-states.js';
+import { advanceCriticalConditions, registerHealthTracking } from './health-states.js';
 import { renderGrenadeBlast } from './grenades.js';
 
 registerRegionCoverControls();
 registerCombatMovement();
+registerHealthTracking();
 
 /* -------------------------------------------- */
 /*  Foundry VTT Initialization                  */
@@ -120,7 +121,7 @@ Hooks.on("renderChatMessage", (app, html, data) => {
         button.textContent = `Apply damage to ${armorDamage.targetName}`;
         button.addEventListener('click', async () => {
             button.disabled = true;
-            await applyArmorDamage(app);
+            await applyArmorDamage(app, { approvedByGM: true });
             if (!app.getFlag('afmbe-left-behind', 'armorDamage')?.applied) button.disabled = false;
         });
         html[0].querySelector('.message-content')?.append(button);
